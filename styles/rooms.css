@@ -2,7 +2,7 @@
 
 /* ─── Room Base ──────────────────────────────────────────────────────────── */
 .room {
-  position: relative;
+  /* position comes from .screen (absolute, inset: 0) — do not override */
   padding: var(--space-lg);
   overflow: hidden;
 }
@@ -27,49 +27,56 @@
 /* ─── Room 1: Bright ─────────────────────────────────────────────────────── */
 #room-bright {
   background: var(--bg);
-  /* TODO: fast, particle-heavy, overwhelming visual */
+  padding: 0; /* canvas fills the room */
 }
 
 /* ─── Room 2: Still ──────────────────────────────────────────────────────── */
 #room-still {
   background: #060608;
-  /* TODO: near-black, minimal movement, high contrast on reveal */
+}
+
+.still-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(200, 200, 220, 0.12);
+  transition: background 2s ease;
 }
 
 /* ─── Room 3: Clock ──────────────────────────────────────────────────────── */
 #room-clock {
   background: var(--bg);
-  /* TODO: central rhythm element, beat indicator */
+  padding: 0;
 }
 
-.beat-indicator {
-  /* TODO: visual pulse tied to the rhythm cycle */
+#clock-counter {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  letter-spacing: 0.15em;
+  pointer-events: none;
 }
 
 /* ─── Room 4: Mirror ─────────────────────────────────────────────────────── */
 #room-mirror {
   background: var(--bg);
-  /* TODO: mirrored/flipped visual of source room */
-  transform-origin: center;
-}
-
-/* Mirror rooms have a subtle horizontal flip on the whole scene */
-#room-mirror .room-scene {
-  /* TODO: consider CSS filter: hue-rotate() to signal inversion */
+  padding: 0;
 }
 
 /* ─── Room 5: Threshold ──────────────────────────────────────────────────── */
 #room-threshold {
   background: var(--bg);
-  /* TODO: sparse, quiet, the exit door visible */
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .exit-door {
-  /* TODO: the door element — subtle, not triumphant */
   cursor: pointer;
+  transition: border-color var(--transition-slow);
 }
 
 /* ─── Interactable Objects ───────────────────────────────────────────────── */

@@ -13,11 +13,11 @@ export const state = {
 
   // Unlocks: which soundboard capabilities are active
   unlocks: {
-    instruments: [],   // e.g. ['piano', 'bass', 'pad', 'noise']
-    effects: [],       // e.g. ['reverb', 'delay', 'distortion', 'filter']
-    bpmRange: [60, 80], // [min, max] — expands as rooms are cleared
-    sequencerRows: 2,  // starts limited, expands
-    lightModes: [],    // e.g. ['warm', 'cool', 'pulse', 'strobe']
+    instruments: ['piano', 'bass'],  // starts with foundation; pad/noise unlock from rooms
+    effects: ['reverb', 'filter'],   // starts with these; delay/distortion unlock from rooms
+    bpmRange: [60, 80],              // [min, max] — expands as rooms are cleared
+    sequencerRows: 2,                // starts limited, expands
+    lightModes: ['balanced'],        // starts with balanced; pulse/strobe unlock later
   },
 
   // Soundboard: current settings

@@ -4,7 +4,7 @@
  * Canvas-based visualizer that responds to soundboard state.
  */
 
-import { state } from '../state.js';
+import { getSignalLevel } from '../audio/engine.js';
 
 let canvas, ctx;
 let width, height;
@@ -12,11 +12,12 @@ let frame = 0;
 let escaping = false;
 let escapeProgress = 0;
 
+let mirrorActive = false;
+let bossPhase = null; // 'leadup' | 'puzzle' | 'escape' | null
+
 // ─── Demo mode ────────────────────────────────────────────────────────────
-// Until the soundboard is wired, slowly cycle through intensity states
-// so there's something alive to look at.
 let demoT = 0;
-const DEMO_CYCLE = 0.0003; // speed of the demo intensity oscillation
+const DEMO_CYCLE = 0.0003;
 
 // ─── Wave layers ─────────────────────────────────────────────────────────
 const LAYERS = [
@@ -44,6 +45,16 @@ function resizeCanvas() {
   height = canvas.height;
 }
 
+// ─── External setters ─────────────────────────────────────────────────────
+
+export function setMirrorActive(active) {
+  mirrorActive = active;
+}
+
+export function setBossPhase(phase) {
+  bossPhase = phase;
+}
+
 // ─── Main loop ────────────────────────────────────────────────────────────
 
 function loop() {
@@ -56,28 +67,30 @@ function loop() {
 // ─── Derive parameters from state ────────────────────────────────────────
 
 function getIntensity() {
-  // If soundboard is active, derive from it.
-  // For now: demo mode — slow sine that spends time in low, mid, and high zones.
-  // Shaped so it lingers in the extremes and moves through the middle.
-  const raw = Math.sin(demoT) * 0.5 + 0.5; // 0..1
-  return raw;
+  const signal = getSignalLevel();
+  if (signal > 0) return signal;
+  // Demo fallback
+  return Math.sin(demoT) * 0.5 + 0.5;
 }
 
 function getColor(intensity) {
-  // Low: cool blue-grey. Middle: muted teal. High: warm amber-red.
+  // Apply boss tint: leadup shifts toward cooler
+  const bossTint = bossPhase === 'leadup' ? 0.4 : bossPhase === 'puzzle' ? 0.7 : 0;
+
   if (intensity < 0.35) {
-    // cold, dim
-    return { r: 50,  g: 65,  b: 90  };
+    return {
+      r: Math.round(50  + bossTint * 10),
+      g: Math.round(65  + bossTint * 30),
+      b: Math.round(90  + bossTint * 20),
+    };
   } else if (intensity < 0.65) {
-    // the middle — this is the answer
     const t = (intensity - 0.35) / 0.3;
     return {
       r: Math.round(50  + t * 30),
-      g: Math.round(65  + t * 47),
-      b: Math.round(90  - t * 10),
+      g: Math.round(65  + t * 47 + bossTint * 20),
+      b: Math.round(90  - t * 10 + bossTint * 20),
     };
   } else {
-    // hot, distorting
     const t = (intensity - 0.65) / 0.35;
     return {
       r: Math.round(80  + t * 148),
@@ -95,10 +108,14 @@ function draw() {
     return;
   }
 
+  // Boss lead-up: slow down the demo cycle
+  if (bossPhase === 'leadup' || bossPhase === 'puzzle') {
+    demoT -= DEMO_CYCLE * 0.65; // net advance much slower
+  }
+
   const intensity = getIntensity();
   const tint = getColor(intensity);
 
-  // Persistence / trail: partially clear instead of full clear
   ctx.fillStyle = 'rgba(10, 10, 15, 0.18)';
   ctx.fillRect(0, 0, width, height);
 
@@ -107,6 +124,10 @@ function draw() {
 
   for (const layer of LAYERS) {
     drawWave(layer, intensity, tint);
+  }
+
+  if (mirrorActive) {
+    drawMirrorOverlay(intensity);
   }
 
   if (intensity > 0.7) {
@@ -126,11 +147,9 @@ function drawWave(layer, intensity, tint) {
   const cy = height / 2;
   const baseAmp = height * 0.22;
 
-  // At low intensity: nearly flat. At high: large + noisy.
   const ampScale = Math.pow(intensity, 0.7);
   const amp = baseAmp * ampScale * layer.ampMult;
 
-  // Frequency drifts slightly with intensity
   const freq = (0.008 + intensity * 0.006) * layer.freqMult;
   const speed = (0.4 + intensity * 1.2) * layer.freqMult;
   const phase = frame * speed * 0.01 + layer.phaseOffset;
@@ -147,17 +166,21 @@ function drawWave(layer, intensity, tint) {
   for (let x = 0; x <= width; x += 2) {
     let y = cy + Math.sin(x * freq + phase) * amp;
 
-    // Add harmonics at high intensity
     if (intensity > 0.6) {
       const harmonic = intensity - 0.6;
       y += Math.sin(x * freq * 3.1 + phase * 1.3) * amp * harmonic * 0.4;
     }
 
-    // Clip / distort at very high intensity
     if (intensity > 0.82) {
       const distort = (intensity - 0.82) * 5;
       y += (Math.random() - 0.5) * amp * distort * 0.3;
       y = Math.max(cy - baseAmp * 1.3, Math.min(cy + baseAmp * 1.3, y));
+    }
+
+    // Mirror: reflect waves symmetrically around center Y
+    if (mirrorActive) {
+      const offset = y - cy;
+      y = cy + offset * Math.cos(frame * 0.004);
     }
 
     x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -167,12 +190,45 @@ function drawWave(layer, intensity, tint) {
   ctx.shadowBlur = 0;
 }
 
+// ─── Mirror overlay ───────────────────────────────────────────────────────
+
+function drawMirrorOverlay(intensity) {
+  // Horizontal axis line
+  ctx.beginPath();
+  ctx.moveTo(0, height / 2);
+  ctx.lineTo(width, height / 2);
+  ctx.strokeStyle = `rgba(80,112,96,${0.08 + intensity * 0.06})`;
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // Vertical symmetry line
+  ctx.beginPath();
+  ctx.moveTo(width / 2, 0);
+  ctx.lineTo(width / 2, height);
+  ctx.strokeStyle = `rgba(80,112,96,0.05)`;
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // Mirror portal indicator — pulsing diamond
+  const pulse = Math.sin(frame * 0.04) * 0.5 + 0.5;
+  const cx = width / 2, cy = height / 2;
+  const s = 8 + pulse * 4;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - s);
+  ctx.lineTo(cx + s, cy);
+  ctx.lineTo(cx, cy + s);
+  ctx.lineTo(cx - s, cy);
+  ctx.closePath();
+  ctx.strokeStyle = `rgba(80,112,96,${0.3 + pulse * 0.3})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
 // ─── Noise (high intensity only) ─────────────────────────────────────────
 
 function drawNoise(intensity, tint) {
   const density = Math.floor((intensity - 0.7) * 80);
   const { r, g, b } = tint;
-
   ctx.fillStyle = `rgba(${r},${g},${b},0.12)`;
   for (let i = 0; i < density; i++) {
     const x = Math.random() * width;
@@ -193,6 +249,16 @@ function drawPortalFrame(intensity, tint) {
   const { r, g, b } = tint;
   const alpha = 0.08 + intensity * 0.08;
 
+  // Boss puzzle phase: additional ring
+  if (bossPhase === 'puzzle') {
+    const pulse = Math.sin(frame * 0.03) * 0.5 + 0.5;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx * 1.05, ry * 1.05, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(80,112,96,${0.04 + pulse * 0.06})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
@@ -200,20 +266,17 @@ function drawPortalFrame(intensity, tint) {
   ctx.stroke();
 }
 
-// ─── Middle glow (the "right" state) ─────────────────────────────────────
+// ─── Middle glow ──────────────────────────────────────────────────────────
 
 function drawMiddleGlow(intensity) {
-  // Soft radial bloom in the center when intensity is in the target window
   const nearness = 1 - Math.abs(intensity - 0.5) / 0.08;
   const a = Math.max(0, nearness) * 0.06;
-
   const grad = ctx.createRadialGradient(
     width/2, height/2, 0,
     width/2, height/2, width * 0.3
   );
-  grad.addColorStop(0,   `rgba(80, 112, 96, ${a})`);
-  grad.addColorStop(1,   `rgba(80, 112, 96, 0)`);
-
+  grad.addColorStop(0, `rgba(80, 112, 96, ${a})`);
+  grad.addColorStop(1, `rgba(80, 112, 96, 0)`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 }
@@ -245,14 +308,11 @@ function drawScanlines() {
 export function playEscapeSequence() {
   escaping = true;
   escapeProgress = 0;
+  bossPhase = 'escape';
 }
 
 function drawEscape() {
   escapeProgress += 0.004;
-
-  // Phase 1 (0–0.4): waves converge to a single clean line
-  // Phase 2 (0.4–0.7): line pulses once, glows
-  // Phase 3 (0.7–1.0): everything fades to black
 
   ctx.fillStyle = 'rgba(10,10,15,0.12)';
   ctx.fillRect(0, 0, width, height);
@@ -260,8 +320,7 @@ function drawEscape() {
   const cy = height / 2;
 
   if (escapeProgress < 0.4) {
-    // Waves converging — amplitude shrinks toward zero
-    const t = escapeProgress / 0.4;  // 0..1
+    const t = escapeProgress / 0.4;
     const amp = (1 - t) * height * 0.22;
     const freq = 0.008;
     const phase = frame * 0.004;
@@ -280,7 +339,6 @@ function drawEscape() {
     ctx.shadowBlur = 0;
 
   } else if (escapeProgress < 0.7) {
-    // Single clean line — pulses gently
     const t = (escapeProgress - 0.4) / 0.3;
     const pulse = Math.sin(t * Math.PI) * 0.5;
 
@@ -295,14 +353,12 @@ function drawEscape() {
     ctx.shadowBlur = 0;
 
   } else {
-    // Fade to black
     const t = (escapeProgress - 0.7) / 0.3;
     ctx.fillStyle = `rgba(10,10,15,${t * 0.15})`;
     ctx.fillRect(0, 0, width, height);
   }
 
   if (escapeProgress >= 1.0) {
-    // Signal to main that escape is complete — show end screen
     escaping = false;
     dispatchEvent(new CustomEvent('loseamp:escaped'));
   }

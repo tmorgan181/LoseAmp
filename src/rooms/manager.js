@@ -1,15 +1,10 @@
 /**
  * rooms/manager.js
  * Room routing, transitions, and door logic.
- *
- * Responsibilities:
- * - Track which doors are currently visible based on soundboard state
- * - Handle entering/exiting rooms (screen transitions)
- * - Pass room-specific state flags to each room module on enter
- * - Update door visibility whenever state changes
  */
 
 import { state } from '../state.js';
+import { evaluateDoors } from '../puzzle/logic.js';
 import { enterBright } from './bright.js';
 import { enterStill } from './still.js';
 import { enterClock } from './clock.js';
@@ -24,9 +19,17 @@ const roomMap = {
   threshold: enterThreshold,
 };
 
+// Atmospheric door labels — not room names
+const DOOR_LABELS = {
+  bright:    '▲',
+  still:     '◦',
+  clock:     '○',
+  mirror:    '◈',
+  threshold: '—',
+};
+
 /**
  * initRooms()
- * Set up door buttons and initial visibility.
  */
 export function initRooms() {
   renderDoors();
@@ -34,47 +37,79 @@ export function initRooms() {
 
 /**
  * renderDoors()
- * Inject door buttons into #room-doors.
- * Visibility and lock state driven by state and getDoorVisibility().
+ * Inject door buttons into #room-doors based on evaluateDoors().
  */
-function renderDoors() {
-  // TODO: for each room, render a door button if it should be visible
-  // Attach click handler -> enterRoom(roomName)
-}
+export function renderDoors() {
+  const container = document.getElementById('room-doors');
+  if (!container) return;
+  container.innerHTML = '';
 
-/**
- * getDoorVisibility()
- * Returns an object mapping room names to 'visible' | 'hidden' | 'locked'.
- * Pure function of current soundboard state.
- */
-export function getDoorVisibility(state) {
-  // TODO: define conditions per room
-  return {
-    bright:    'hidden',
-    still:     'hidden',
-    clock:     'hidden',
-    mirror:    'hidden',
-    threshold: 'hidden',
-  };
+  const visibility = evaluateDoors(state);
+
+  Object.entries(visibility).forEach(([name, vis]) => {
+    if (vis === 'hidden') return;
+
+    const btn = document.createElement('button');
+    btn.className = `door-btn ${vis}`;
+    btn.dataset.room = name;
+    btn.textContent = DOOR_LABELS[name] || name;
+    btn.title = name; // only shown on hover in browser, not on-screen text
+
+    if (vis === 'locked') {
+      btn.disabled = true;
+    } else {
+      btn.addEventListener('click', () => enterRoom(name));
+    }
+
+    container.appendChild(btn);
+  });
 }
 
 /**
  * enterRoom(name)
- * Transition from hub to a room screen.
  */
 export function enterRoom(name) {
-  // TODO: hide hub, show room, call room's enter function
-  // Update state.currentScreen
+  const hub = document.getElementById('hub');
+  const roomEl = document.getElementById(`room-${name}`);
+  if (!roomEl) return;
+
+  hub.classList.remove('active');
+  roomEl.classList.remove('hidden');
+
+  // Small delay so CSS transition fires
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      roomEl.classList.add('active');
+    });
+  });
+
+  state.currentScreen = name;
+  if (!state.rooms[name]) state.rooms[name] = { visited: false, cleared: false, flags: {} };
+  state.rooms[name].visited = true;
+
   const enterFn = roomMap[name];
   if (enterFn) enterFn(state);
 }
 
 /**
  * exitRoom()
- * Return to the hub from any room.
  */
 export function exitRoom() {
-  // TODO: hide current room, show hub, re-evaluate doors
+  const current = state.currentScreen;
+  if (current === 'hub') return;
+
+  const roomEl = document.getElementById(`room-${current}`);
+  const hub = document.getElementById('hub');
+
+  if (roomEl) {
+    roomEl.classList.remove('active');
+    setTimeout(() => {
+      roomEl.classList.add('hidden');
+    }, 400); // match transition-med
+  }
+
+  hub.classList.add('active');
   state.currentScreen = 'hub';
+
   renderDoors();
 }

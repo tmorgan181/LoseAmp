@@ -153,3 +153,31 @@ input[type="range"]:hover::-webkit-slider-thumb {
   opacity: 1;
   pointer-events: all;
 }
+
+.end-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.end-word {
+  font-family: var(--font-display);
+  color: rgba(128, 160, 140, 0.74);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+
+.end-reset {
+  background: transparent;
+  border-color: rgba(80, 112, 96, 0.45);
+  color: rgba(128, 160, 140, 0.66);
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+}
+
+.end-reset:hover {
+  border-color: rgba(128, 160, 140, 0.5);
+  color: rgba(180, 196, 188, 0.84);
+}

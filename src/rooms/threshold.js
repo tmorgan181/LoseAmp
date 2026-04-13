@@ -1,46 +1,98 @@
 /**
  * rooms/threshold.js
  * Room 5 — Threshold
- *
- * Only visible when the Loseamp is in the middle state — not too hot, not too quiet.
- * Contains the exit. Getting here requires balance, not power.
- * The final puzzle is in the hub (the Concert), not in this room.
- * This room is the confirmation that you're ready.
- *
- * Puzzle style: gating — presence here means you've already done the work
- * Reward: access to the final boss sequence
- *
- * State flags (state.rooms.threshold.flags):
- *   - reached: bool        — player made it here
- *   - bossTriggered: bool
+ * Sparse. A single door outline at center. Clicking it triggers the boss.
+ * First-visit text appears after 3 seconds, never again.
  */
 
 import { exitRoom } from './manager.js';
 import { triggerBossLeadup } from '../puzzle/logic.js';
 
-/**
- * enterThreshold(state)
- */
 export function enterThreshold(state) {
   const el = document.getElementById('room-threshold');
-  el.classList.remove('hidden');
+  el.innerHTML = '';
+
   state.rooms.threshold.flags.reached = true;
   state.rooms.threshold.visited = true;
-  // TODO: render room — quiet, spare, the door to outside visible
+
+  // Back button
+  const back = document.createElement('button');
+  back.className = 'room-back';
+  back.textContent = '←';
+  back.addEventListener('click', () => exitThreshold());
+  el.appendChild(back);
+
+  // The door — centered, just an outline
+  const door = document.createElement('div');
+  door.className = 'exit-door';
+  door.style.cssText = [
+    'width:60px',
+    'height:100px',
+    'border:1px solid rgba(80,112,96,0.2)',
+    'cursor:pointer',
+    'transition:border-color var(--transition-slow)',
+    'position:relative',
+  ].join(';');
+  door.addEventListener('click', () => onExitDoorInteract(state));
+  door.addEventListener('mouseenter', () => {
+    door.style.borderColor = 'rgba(80,112,96,0.5)';
+  });
+  door.addEventListener('mouseleave', () => {
+    door.style.borderColor = 'rgba(80,112,96,0.2)';
+  });
+  el.appendChild(door);
+
+  // First-visit text — appears once after 3s, never shown again
+  if (!state.rooms.threshold.flags.textShown) {
+    setTimeout(() => {
+      if (document.getElementById('room-threshold').classList.contains('active')) {
+        showFirstVisitText(el);
+        state.rooms.threshold.flags.textShown = true;
+      }
+    }, 3000);
+  }
+}
+
+function showFirstVisitText(container) {
+  const txt = document.createElement('div');
+  txt.style.cssText = [
+    'position:absolute',
+    'bottom:var(--space-xl)',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'font-family:var(--font-mono)',
+    'font-size:11px',
+    'letter-spacing:0.2em',
+    'color:rgba(112,128,144,0)',
+    'white-space:nowrap',
+    'pointer-events:none',
+    'transition:color 1.5s ease',
+  ].join(';');
+  txt.textContent = 'stay in the middle';
+  container.appendChild(txt);
+
+  requestAnimationFrame(() => {
+    txt.style.color = 'rgba(112,128,144,0.4)';
+  });
+
+  // Fade out after a while
+  setTimeout(() => {
+    txt.style.color = 'rgba(112,128,144,0)';
+    setTimeout(() => txt.remove(), 1600);
+  }, 5000);
 }
 
 function exitThreshold() {
   const el = document.getElementById('room-threshold');
-  el.classList.add('hidden');
+  el.innerHTML = '';
   exitRoom();
 }
 
-/**
- * onExitDoorInteract(state)
- * Player interacts with the exit door.
- * Sends them back to the hub and triggers the boss lead-up phase.
- */
 export function onExitDoorInteract(state) {
+  if (state.rooms.threshold.flags.bossTriggered) {
+    exitThreshold();
+    return;
+  }
   state.rooms.threshold.flags.bossTriggered = true;
   exitThreshold();
   triggerBossLeadup(state);

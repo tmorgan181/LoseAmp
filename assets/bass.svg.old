@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 120" fill="currentColor">
+  <!-- Upright bass: body, waist, neck, scroll, strings -->
+  <!-- Lower bout -->
+  <ellipse cx="40" cy="88" rx="26" ry="28"/>
+  <!-- Upper bout -->
+  <ellipse cx="40" cy="52" rx="20" ry="20"/>
+  <!-- Waist cutout (negative space suggestion) -->
+  <ellipse cx="40" cy="70" rx="13" ry="10" fill="black" opacity="0.5"/>
+  <!-- Neck -->
+  <rect x="37" y="14" width="6" height="38" rx="2"/>
+  <!-- Scroll/head -->
+  <ellipse cx="40" cy="11" rx="6" ry="8"/>
+  <!-- F-holes suggestion -->
+  <rect x="31" y="68" width="2" height="12" rx="1" fill="black" opacity="0.4"/>
+  <rect x="47" y="68" width="2" height="12" rx="1" fill="black" opacity="0.4"/>
+</svg>
