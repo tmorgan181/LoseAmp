@@ -1,0 +1,100 @@
+/* rooms.css — shared room styles */
+
+/* ─── Room Base ──────────────────────────────────────────────────────────── */
+.room {
+  position: relative;
+  padding: var(--space-lg);
+  overflow: hidden;
+}
+
+/* Back to hub button — present in every room */
+.room-back {
+  position: absolute;
+  top: var(--space-md);
+  left: var(--space-md);
+  font-size: 11px;
+  color: var(--fg-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+.room-back:hover {
+  color: var(--fg);
+}
+
+/* ─── Room 1: Bright ─────────────────────────────────────────────────────── */
+#room-bright {
+  background: var(--bg);
+  /* TODO: fast, particle-heavy, overwhelming visual */
+}
+
+/* ─── Room 2: Still ──────────────────────────────────────────────────────── */
+#room-still {
+  background: #060608;
+  /* TODO: near-black, minimal movement, high contrast on reveal */
+}
+
+/* ─── Room 3: Clock ──────────────────────────────────────────────────────── */
+#room-clock {
+  background: var(--bg);
+  /* TODO: central rhythm element, beat indicator */
+}
+
+.beat-indicator {
+  /* TODO: visual pulse tied to the rhythm cycle */
+}
+
+/* ─── Room 4: Mirror ─────────────────────────────────────────────────────── */
+#room-mirror {
+  background: var(--bg);
+  /* TODO: mirrored/flipped visual of source room */
+  transform-origin: center;
+}
+
+/* Mirror rooms have a subtle horizontal flip on the whole scene */
+#room-mirror .room-scene {
+  /* TODO: consider CSS filter: hue-rotate() to signal inversion */
+}
+
+/* ─── Room 5: Threshold ──────────────────────────────────────────────────── */
+#room-threshold {
+  background: var(--bg);
+  /* TODO: sparse, quiet, the exit door visible */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exit-door {
+  /* TODO: the door element — subtle, not triumphant */
+  cursor: pointer;
+}
+
+/* ─── Interactable Objects ───────────────────────────────────────────────── */
+.interactable {
+  cursor: pointer;
+  transition: opacity var(--transition-med);
+}
+
+.interactable:hover {
+  opacity: 0.7;
+}
+
+.item-pickup {
+  /* TODO: visual for collectible items in rooms */
+}
+
+/* ─── Code / Clue Display ────────────────────────────────────────────────── */
+.clue-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 0.2em;
+}
+
+.revealed {
+  color: var(--accent-mid);
+  transition: color var(--transition-slow);
+}

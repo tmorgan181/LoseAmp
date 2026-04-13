@@ -1,0 +1,155 @@
+/* main.css — global styles, CSS variables, typography */
+
+/* ─── Variables ──────────────────────────────────────────────────────────── */
+:root {
+  /* Colors */
+  --bg:            #0a0a0f;
+  --surface:       #111118;
+  --surface-2:     #1a1a24;
+  --border:        #2a2a3a;
+
+  --fg:            #c8c8d8;
+  --fg-dim:        #6a6a80;
+  --fg-muted:      #3a3a50;
+
+  --accent-warm:   #c87040;   /* amber — the "too hot" signal */
+  --accent-cool:   #4080a0;   /* steel blue — the "too cold" signal */
+  --accent-mid:    #708090;   /* slate — the middle, the answer */
+  --accent-portal: #507060;   /* muted teal — the Loseamp glow */
+
+  /* Lights (driven by lights.js at runtime) */
+  --light-warm: 0;
+  --light-cool: 0;
+
+  /* Typography */
+  --font-mono: 'Courier New', 'Lucida Console', monospace;
+  --font-display: Georgia, 'Times New Roman', serif;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 32px;
+  --space-xl: 64px;
+
+  /* Transitions */
+  --transition-slow: 1.2s ease;
+  --transition-med:  0.4s ease;
+  --transition-fast: 0.15s ease;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ─── Screens ────────────────────────────────────────────────────────────── */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-med);
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: normal;
+  letter-spacing: 0.05em;
+}
+
+label {
+  color: var(--fg-dim);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ─── Controls (shared) ──────────────────────────────────────────────────── */
+button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+button:hover {
+  background: var(--surface);
+  border-color: var(--fg-dim);
+}
+
+button.active {
+  background: var(--surface);
+  border-color: var(--accent-mid);
+  color: var(--accent-mid);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: var(--fg-dim);
+  border-radius: 50%;
+  transition: background var(--transition-fast);
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--accent-mid);
+}
+
+/* ─── Overlay ────────────────────────────────────────────────────────────── */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-slow);
+}
+
+#overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}

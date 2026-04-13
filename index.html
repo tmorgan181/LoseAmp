@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoseAmp</title>
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/loseamp.css" />
+  <link rel="stylesheet" href="styles/rooms.css" />
+</head>
+<body>
+
+  <!-- Hub: The Loseamp -->
+  <div id="hub" class="screen active">
+
+    <header id="hub-header">
+      <div id="room-doors">
+        <!-- Door buttons injected by rooms/manager.js -->
+      </div>
+      <div id="inventory-bar">
+        <!-- Collected items displayed here -->
+      </div>
+    </header>
+
+    <main id="portal-area">
+      <canvas id="loseamp-canvas"></canvas>
+      <div id="mirror-portal" class="hidden"></div>
+    </main>
+
+    <section id="control-panel">
+      <div id="instruments-panel">
+        <!-- Instrument/tone toggles — controls.js -->
+      </div>
+      <div id="sequencer-panel">
+        <!-- Beat grid + BPM — controls.js -->
+      </div>
+      <div id="effects-panel">
+        <!-- Knobs/sliders — controls.js -->
+      </div>
+      <div id="lights-panel">
+        <!-- Light controls — lights.js -->
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Rooms (hidden until entered) -->
+  <div id="room-bright"    class="screen room hidden"></div>
+  <div id="room-still"     class="screen room hidden"></div>
+  <div id="room-clock"     class="screen room hidden"></div>
+  <div id="room-mirror"    class="screen room hidden"></div>
+  <div id="room-threshold" class="screen room hidden"></div>
+
+  <!-- Overlay: escape sequence, end screen, transitions -->
+  <div id="overlay" class="hidden"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
