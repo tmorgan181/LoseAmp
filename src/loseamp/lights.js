@@ -5,6 +5,7 @@
 
 import { state, saveState } from '../state.js';
 import { checkPuzzleState } from '../puzzle/logic.js';
+import { updateMirrorAvailability } from './controls.js';
 
 const MODE_LABELS = {
   off:      'off',
@@ -14,15 +15,18 @@ const MODE_LABELS = {
   pulse:    'pulse',
   strobe:   'strobe',
 };
+const MODE_ORDER = ['off', 'warm', 'cool', 'balanced', 'pulse', 'strobe'];
 
 export function initLights() {
   renderLightControls();
   applyLights();
+  updateMirrorAvailability();
 }
 
 function renderLightControls() {
   const panel = document.getElementById('lights-panel');
   panel.innerHTML = '';
+  panel.classList.add('control-panel-section', 'panel-light');
 
   const label = document.createElement('span');
   label.className = 'panel-label';
@@ -46,8 +50,13 @@ function renderLightControls() {
   modesWrap.id = 'light-modes';
   modesWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;';
 
-  const ALL_MODES = ['off', 'warm', 'cool', 'balanced', 'pulse', 'strobe'];
-  ALL_MODES.forEach(mode => {
+  const modes = [
+    'off',
+    ...MODE_ORDER.filter(mode => mode !== 'off' && state.unlocks.lightModes.includes(mode)),
+    ...state.unlocks.lightModes.filter(mode => !MODE_ORDER.includes(mode)),
+  ];
+
+  modes.forEach(mode => {
     if (!state.unlocks.lightModes.includes(mode) && mode !== 'off') return;
 
     const btn = document.createElement('button');
@@ -128,6 +137,9 @@ function syncSliders() {
   const cs = document.getElementById('light-cool-slider');
   if (ws) ws.value = state.soundboard.lights.warm;
   if (cs) cs.value = state.soundboard.lights.cool;
+  document.querySelectorAll('#lights-panel label span').forEach((el, index) => {
+    el.textContent = [state.soundboard.lights.warm, state.soundboard.lights.cool][index].toFixed(2);
+  });
 }
 
 /**
@@ -142,6 +154,8 @@ export function applyLights() {
 
 function onChange() {
   applyLights();
+  updateMirrorAvailability();
+  import('../rooms/manager.js').then(m => m.renderDoors());
   saveState();
   checkPuzzleState(state);
 }

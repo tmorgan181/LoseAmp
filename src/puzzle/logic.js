@@ -36,7 +36,7 @@ export function applyUnlock(state, item) {
       }
       break;
     case 'bpm-expand':
-      state.unlocks.bpmRange = [55, 90];
+      state.unlocks.bpmRange = [15, 90];
       break;
     case 'sequencer-row':
       state.unlocks.sequencerRows = Math.min(4, state.unlocks.sequencerRows + 1);
@@ -56,8 +56,8 @@ export function evaluateDoors(state) {
   const rooms = state.rooms;
 
   return {
-    // Bright: always accessible once you can see it
-    bright: 'visible',
+    // Bright: only appears once the machine has been awakened
+    bright: state.meta?.awakened ? 'visible' : 'hidden',
 
     // Still: opens after Bright is cleared
     still: rooms.bright.cleared ? 'visible' : 'hidden',

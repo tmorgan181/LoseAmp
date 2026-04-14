@@ -18,6 +18,7 @@ let sequencerTimer = null;
 let currentStep = 0;
 let _state = null;
 let _lastBpm = null;
+let isTransportRunning = false;
 
 const INST_CONFIG = {
   piano:  { type: 'sine',     freq: 261.6, attack: 0.005, decay: 0.3,  sustain: 0.1 },
@@ -72,7 +73,7 @@ function ensureContext() {
   analyser.connect(masterGain);
   masterGain.connect(audioCtx.destination);
 
-  if (_state) startSequencer();
+  if (_state && isTransportRunning) startSequencer();
 }
 
 function makeDistortionCurve(amount) {
@@ -87,26 +88,43 @@ function makeDistortionCurve(amount) {
 }
 
 export function startSequencer() {
-  stopSequencer();
+  isTransportRunning = true;
   if (!audioCtx || !_state) return;
-
-  const bpm = _state.soundboard.bpm || 72;
-  _lastBpm = bpm;
-  const interval = (60 / bpm) * 1000 * 0.25; // 16th note
-
   currentStep = 0;
-  sequencerTimer = setInterval(() => {
-    tickSequencer();
-    updatePlayhead(currentStep);
-    currentStep = (currentStep + 1) % 16;
-  }, interval);
+  scheduleSequencer({ resetStep: true, immediateTick: false });
 }
 
 export function stopSequencer() {
-  if (sequencerTimer) {
-    clearInterval(sequencerTimer);
-    sequencerTimer = null;
+  isTransportRunning = false;
+  clearSequencerTimer();
+  updatePlayhead(-1);
+}
+
+export function restartSequencer() {
+  currentStep = 0;
+  isTransportRunning = true;
+  scheduleSequencer({ resetStep: true, immediateTick: true });
+}
+
+export function resumeSequencer() {
+  isTransportRunning = true;
+  if (!audioCtx) {
+    ensureContext();
+    return;
   }
+
+  if (!sequencerTimer) {
+    scheduleSequencer({ resetStep: false, immediateTick: false });
+    updatePlayhead(currentStep);
+  }
+}
+
+export function isSequencerRunning() {
+  return isTransportRunning && Boolean(sequencerTimer);
+}
+
+export function getCurrentSequencerStep() {
+  return currentStep;
 }
 
 function tickSequencer() {
@@ -187,9 +205,13 @@ export function updateFromState(state) {
     reverbGain.gain.value = sb.effects.reverb * 0.4;
   }
 
-  // Only restart sequencer if BPM changed or it's not running
-  if (sb.bpm !== prevBpm || !sequencerTimer) {
-    startSequencer();
+  if (sb.bpm !== prevBpm) {
+    _lastBpm = sb.bpm;
+    if (isTransportRunning && sequencerTimer) {
+      scheduleSequencer({ resetStep: false, immediateTick: false });
+    }
+  } else if (isTransportRunning && !sequencerTimer) {
+    scheduleSequencer({ resetStep: false, immediateTick: false });
   }
 }
 
@@ -203,4 +225,45 @@ export function getSignalLevel() {
     sum += v * v;
   }
   return Math.min(1, Math.sqrt(sum / data.length) * 3);
+}
+
+function getSequencerIntervalMs() {
+  const bpm = _state?.soundboard.bpm || 72;
+  _lastBpm = bpm;
+  return (60 / bpm) * 1000 * 0.25;
+}
+
+function clearSequencerTimer() {
+  if (sequencerTimer) {
+    clearInterval(sequencerTimer);
+    sequencerTimer = null;
+  }
+}
+
+function advanceSequencer() {
+  tickSequencer();
+  updatePlayhead(currentStep);
+  currentStep = (currentStep + 1) % 16;
+}
+
+function scheduleSequencer(options = {}) {
+  const { resetStep = false, immediateTick = false } = options;
+  if (!audioCtx || !_state) return;
+
+  clearSequencerTimer();
+
+  if (resetStep) {
+    currentStep = 0;
+  }
+
+  if (immediateTick) {
+    advanceSequencer();
+  } else {
+    updatePlayhead(currentStep);
+  }
+
+  const interval = getSequencerIntervalMs();
+  sequencerTimer = setInterval(() => {
+    advanceSequencer();
+  }, interval);
 }

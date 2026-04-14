@@ -30,6 +30,36 @@
   padding: 0; /* canvas fills the room */
 }
 
+.room-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 42px;
+  transform: translateX(-50%);
+  max-width: min(440px, calc(100vw - 48px));
+  padding: 8px 12px;
+  color: rgba(192, 202, 214, 0);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  text-align: center;
+  pointer-events: none;
+  transition:
+    opacity 0.5s ease,
+    color 0.5s ease,
+    transform 0.5s ease;
+  opacity: 0;
+}
+
+.room-hint.visible {
+  opacity: 1;
+  color: rgba(192, 202, 214, 0.74);
+  transform: translateX(-50%) translateY(-3px);
+}
+
+.room-hint-bright {
+  text-shadow: 0 0 18px rgba(80, 112, 96, 0.16);
+}
+
 /* ─── Room 2: Still ──────────────────────────────────────────────────────── */
 #room-still {
   background: #060608;

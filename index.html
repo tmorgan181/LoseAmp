@@ -11,6 +11,19 @@
 </head>
 <body>
 
+  <div id="title-screen" class="hidden">
+    <div class="title-shell">
+      <p class="title-kicker">an instrument for leaving</p>
+      <h1 class="title-word">LoseAmp</h1>
+      <p class="title-copy">Touch the quiet thing in the center when you are ready.</p>
+      <div class="title-actions">
+        <button id="title-start" type="button">begin</button>
+        <a class="title-demo-link" href="./demo/">demo rig</a>
+      </div>
+    </div>
+    <div class="title-noise" aria-hidden="true"></div>
+  </div>
+
   <!-- Hub: The Loseamp -->
   <div id="hub" class="screen active">
 
@@ -24,8 +37,14 @@
     </header>
 
     <main id="portal-area">
+      <div class="portal-aura portal-aura-left" aria-hidden="true"></div>
+      <div class="portal-aura portal-aura-right" aria-hidden="true"></div>
       <canvas id="loseamp-canvas"></canvas>
-      <div id="mirror-portal" class="hidden"></div>
+      <div id="mirror-portal" aria-hidden="true">
+        <div class="mirror-portal-axis"></div>
+        <div class="mirror-portal-core"></div>
+        <div class="mirror-portal-rim"></div>
+      </div>
     </main>
 
     <section id="control-panel">

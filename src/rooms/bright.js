@@ -15,6 +15,7 @@ const REVEAL_DURATION = 2500;
 const REVEAL_FADE     = 600;
 const IMAGE_OPACITY   = 0.28;
 const IMAGE_SIZE      = 160;
+const ASSET_BASE_URL  = new URL('../../assets/', import.meta.url);
 
 let canvas, ctx;
 let particles = [];
@@ -25,6 +26,8 @@ let revealStart  = null;
 let revealTimer  = null;
 let animFrameId  = null;
 let foci = { piano: { x: 0, y: 0 }, bass: { x: 0, y: 0 } };
+let hintEl = null;
+let hintTimeout = null;
 
 // ─── Entry / Exit ─────────────────────────────────────────────────────────────
 
@@ -63,6 +66,10 @@ function buildDOM(el) {
   el.appendChild(canvas);
   ctx = canvas.getContext('2d');
 
+  hintEl = document.createElement('div');
+  hintEl.className = 'room-hint room-hint-bright';
+  el.appendChild(hintEl);
+
   const back = document.createElement('button');
   back.className = 'room-back';
   back.textContent = '←';
@@ -90,7 +97,7 @@ function loadImages() {
   for (const [name, file] of [['piano','piano.png'],['bass','upright_bass.png']]) {
     const img = new Image();
     img.onload = () => { images[name] = img; if (++loaded === 2) imagesLoaded = true; };
-    img.src = `assets/${file}`;
+    img.src = new URL(file, ASSET_BASE_URL).href;
   }
 }
 
@@ -156,12 +163,17 @@ function drawParticles() {
 function scheduleNextReveal() {
   const delay = REVEAL_MIN + Math.random() * (REVEAL_MAX - REVEAL_MIN);
   revealTimer = setTimeout(startReveal, delay);
+
+  if (!state.rooms.bright.cleared && !state.rooms.bright.flags.hintShown) {
+    queueHint('wait until the light gathers');
+  }
 }
 
 function startReveal() {
   if (state.rooms.bright.cleared) return;
   revealActive = true;
   revealStart  = Date.now();
+  queueHint('when forms appear, touch one');
   setTimeout(() => {
     revealActive = false;
     revealStart  = null;
@@ -212,10 +224,13 @@ function dst(x1, y1, x2, y2) {
 function collectItem() {
   state.rooms.bright.cleared = true;
   state.rooms.bright.flags.itemCollected = true;
+  state.rooms.bright.flags.hintShown = true;
   if (!state.unlocks.instruments.includes('piano')) state.unlocks.instruments.push('piano');
   if (!state.unlocks.instruments.includes('bass'))  state.unlocks.instruments.push('bass');
   state.unlocks.mirrorToggle = true;
   saveState();
+
+  hideHint(true);
 
   for (const p of particles) { p.vx *= 0.3; p.vy *= 0.3; p.decay *= 3; }
   import('../loseamp/controls.js').then(m => m.initControls());
@@ -231,4 +246,29 @@ function loop() {
   drawSilhouettes();
   updateParticles();
   drawParticles();
+}
+
+function queueHint(text) {
+  if (!hintEl || state.rooms.bright.cleared) return;
+  state.rooms.bright.flags.hintShown = true;
+  hintEl.textContent = text;
+  hintEl.classList.add('visible');
+
+  if (hintTimeout) clearTimeout(hintTimeout);
+  hintTimeout = setTimeout(() => hideHint(), 3400);
+}
+
+function hideHint(immediate = false) {
+  if (!hintEl) return;
+  if (hintTimeout) {
+    clearTimeout(hintTimeout);
+    hintTimeout = null;
+  }
+
+  if (immediate) {
+    hintEl.classList.remove('visible');
+    return;
+  }
+
+  hintEl.classList.remove('visible');
 }

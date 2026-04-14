@@ -4,58 +4,84 @@
  * All modules read from and write to this object.
  */
 
-export const state = {
-  // Which screen is currently visible: 'hub' | 'bright' | 'still' | 'clock' | 'mirror' | 'threshold'
-  currentScreen: 'hub',
-
-  // Inventory: items collected from rooms
-  inventory: [],
-
-  // Unlocks: which soundboard capabilities are active
-  unlocks: {
-    instruments: ['piano', 'bass'],  // starts with foundation; pad/noise unlock from rooms
-    effects: ['reverb', 'filter'],   // starts with these; delay/distortion unlock from rooms
-    bpmRange: [60, 80],              // [min, max] — expands as rooms are cleared
-    sequencerRows: 2,                // starts limited, expands
-    lightModes: ['balanced'],        // starts with balanced; pulse/strobe unlock later
-  },
-
-  // Soundboard: current settings
-  soundboard: {
-    bpm: 72,
-    activeInstruments: [],
-    sequence: [],        // 2D array: [row][step] = bool
-    effects: {
-      reverb: 0,
-      delay: 0,
-      distortion: 0,
-      filter: 0.5,
+function createGameState() {
+  return {
+    currentScreen: 'hub',
+    inventory: [],
+    unlocks: {
+      instruments: ['piano', 'bass'],
+      effects: ['reverb', 'filter'],
+      bpmRange: [15, 80],
+      sequencerRows: 2,
+      lightModes: ['balanced'],
     },
-    lights: {
-      warm: 0,
-      cool: 0,
-      mode: null,
+    soundboard: {
+      bpm: 72,
+      activeInstruments: [],
+      sequence: [],
+      presets: [null, null, null],
+      effects: {
+        reverb: 0,
+        delay: 0,
+        distortion: 0,
+        filter: 0.5,
+      },
+      lights: {
+        warm: 0,
+        cool: 0,
+        mode: null,
+      },
+      mirrorActive: false,
     },
-    mirrorActive: false,
-  },
+    rooms: {
+      bright:    { visited: false, cleared: false, flags: {} },
+      still:     { visited: false, cleared: false, flags: {} },
+      clock:     { visited: false, cleared: false, flags: {} },
+      mirror:    { visited: false, cleared: false, flags: {} },
+      threshold: { visited: false, cleared: false, flags: {} },
+    },
+    boss: {
+      active: false,
+      phase: null,
+      holdStart: null,
+      escaped: false,
+    },
+    meta: {
+      routeMode: 'game',
+      awakened: false,
+      titleDismissed: false,
+    },
+  };
+}
 
-  // Room flags: tracks state per room across visits
-  rooms: {
-    bright:    { visited: false, cleared: false, flags: {} },
-    still:     { visited: false, cleared: false, flags: {} },
-    clock:     { visited: false, cleared: false, flags: {} },
-    mirror:    { visited: false, cleared: false, flags: {} },
-    threshold: { visited: false, cleared: false, flags: {} },
-  },
+function createDemoState() {
+  const state = createGameState();
+  state.unlocks = {
+    instruments: ['piano', 'bass', 'pad', 'noise'],
+    effects: ['reverb', 'delay', 'distortion', 'filter'],
+    bpmRange: [15, 90],
+    sequencerRows: 4,
+    lightModes: ['balanced', 'warm', 'cool', 'pulse', 'strobe'],
+  };
+  state.meta.routeMode = 'demo';
+  state.meta.awakened = true;
+  state.meta.titleDismissed = true;
+  return state;
+}
 
-  // Boss sequence
-  boss: {
-    active: false,
-    phase: null,       // 'leadup' | 'puzzle' | 'escape'
-    holdStart: null,   // timestamp when correct state first achieved
-    escaped: false,
-  },
-};
+export const state = createGameState();
+
+export function configureState(mode = 'game') {
+  const next = mode === 'demo' ? createDemoState() : createGameState();
+  replaceState(next);
+}
+
+function replaceState(nextState) {
+  for (const key of Object.keys(state)) {
+    delete state[key];
+  }
+  Object.assign(state, nextState);
+}
 
 /**
  * loadState()
@@ -78,6 +104,6 @@ export function saveState() {
  * resetState()
  * Wipe state back to defaults (new game).
  */
-export function resetState() {
-  // TODO
+export function resetState(mode = state.meta?.routeMode || 'game') {
+  configureState(mode);
 }

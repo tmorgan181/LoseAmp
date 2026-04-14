@@ -4,7 +4,8 @@
  * Canvas-based visualizer that responds to soundboard state.
  */
 
-import { getSignalLevel } from '../audio/engine.js';
+import { getCurrentSequencerStep, getSignalLevel, isSequencerRunning } from '../audio/engine.js';
+import { state } from '../state.js';
 
 let canvas, ctx;
 let width, height;
@@ -26,6 +27,13 @@ const LAYERS = [
   { freqMult: 0.5,  phaseOffset: Math.PI*0.8, ampMult: 0.75, alpha: 0.25, color: [96,  112, 80]  },
   { freqMult: 2.3,  phaseOffset: Math.PI*1.4, ampMult: 0.3,  alpha: 0.2,  color: [80,  80,  100] },
 ];
+
+const INSTRUMENT_COLORS = {
+  piano: { base: [196, 168, 120], glow: [228, 204, 162] },
+  bass:  { base: [88, 164, 210], glow: [142, 200, 236] },
+  pad:   { base: [144, 116, 188], glow: [188, 162, 226] },
+  noise: { base: [210, 102, 118], glow: [236, 146, 164] },
+};
 
 // ─── Init ─────────────────────────────────────────────────────────────────
 
@@ -49,10 +57,14 @@ function resizeCanvas() {
 
 export function setMirrorActive(active) {
   mirrorActive = active;
+  document.body.classList.toggle('mirror-active', active);
+  document.getElementById('portal-area')?.classList.toggle('mirror-active', active);
 }
 
 export function setBossPhase(phase) {
   bossPhase = phase;
+  document.body.dataset.bossPhase = phase || '';
+  document.getElementById('portal-area')?.setAttribute('data-boss-phase', phase || '');
 }
 
 // ─── Main loop ────────────────────────────────────────────────────────────
@@ -69,6 +81,9 @@ function loop() {
 function getIntensity() {
   const signal = getSignalLevel();
   if (signal > 0) return signal;
+  if (document.body.classList.contains('pre-awaken')) {
+    return 0.14 + (Math.sin(demoT * 0.7) * 0.5 + 0.5) * 0.08;
+  }
   // Demo fallback
   return Math.sin(demoT) * 0.5 + 0.5;
 }
@@ -115,15 +130,17 @@ function draw() {
 
   const intensity = getIntensity();
   const tint = getColor(intensity);
+  const beatVisual = getBeatVisualState(intensity);
 
   ctx.fillStyle = 'rgba(10, 10, 15, 0.18)';
   ctx.fillRect(0, 0, width, height);
 
   drawVignette();
-  drawPortalFrame(intensity, tint);
+  drawBeatAura(beatVisual, intensity);
+  drawPortalFrame(intensity, tint, beatVisual);
 
   for (const layer of LAYERS) {
-    drawWave(layer, intensity, tint);
+    drawWave(layer, intensity, tint, beatVisual);
   }
 
   if (mirrorActive) {
@@ -143,7 +160,7 @@ function draw() {
 
 // ─── Wave ────────────────────────────────────────────────────────────────
 
-function drawWave(layer, intensity, tint) {
+function drawWave(layer, intensity, tint, beatVisual) {
   const cy = height / 2;
   const baseAmp = height * 0.22;
 
@@ -158,10 +175,11 @@ function drawWave(layer, intensity, tint) {
   const a = layer.alpha * (0.3 + intensity * 0.7);
 
   ctx.beginPath();
-  ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
+  ctx.strokeStyle = createWaveGradient(r, g, b, a, beatVisual);
   ctx.lineWidth = intensity < 0.35 ? 0.5 : 1.0;
-  ctx.shadowColor = `rgba(${r},${g},${b},${a * 0.6})`;
-  ctx.shadowBlur  = 8 + intensity * 16;
+  const glow = beatVisual.colors[0] || [r, g, b];
+  ctx.shadowColor = `rgba(${glow[0]},${glow[1]},${glow[2]},${a * 0.52})`;
+  ctx.shadowBlur  = 8 + intensity * 16 + beatVisual.pulse * 8;
 
   for (let x = 0; x <= width; x += 2) {
     let y = cy + Math.sin(x * freq + phase) * amp;
@@ -188,6 +206,67 @@ function drawWave(layer, intensity, tint) {
 
   ctx.stroke();
   ctx.shadowBlur = 0;
+}
+
+function createWaveGradient(r, g, b, a, beatVisual) {
+  const gradient = ctx.createLinearGradient(0, height / 2, width, height / 2);
+
+  if (!beatVisual.colors.length) {
+    gradient.addColorStop(0, `rgba(${r},${g},${b},${a * 0.45})`);
+    gradient.addColorStop(0.5, `rgba(${r},${g},${b},${a})`);
+    gradient.addColorStop(1, `rgba(${r},${g},${b},${a * 0.45})`);
+    return gradient;
+  }
+
+  const colorA = beatVisual.colors[0];
+  const colorB = beatVisual.colors[1] || beatVisual.colors[0];
+  gradient.addColorStop(0, `rgba(${colorA[0]},${colorA[1]},${colorA[2]},${a * 0.55})`);
+  gradient.addColorStop(0.35, `rgba(${r},${g},${b},${a * 0.72})`);
+  gradient.addColorStop(0.65, `rgba(${r},${g},${b},${a * 0.86})`);
+  gradient.addColorStop(1, `rgba(${colorB[0]},${colorB[1]},${colorB[2]},${a * 0.55})`);
+  return gradient;
+}
+
+function getBeatVisualState(intensity) {
+  const step = getCurrentSequencerStep();
+  const running = isSequencerRunning();
+  const colors = [];
+
+  if (running && step >= 0) {
+    state.soundboard.activeInstruments.forEach(name => {
+      const rowIdx = state.unlocks.instruments.indexOf(name);
+      if (rowIdx < 0) return;
+      const row = state.soundboard.sequence[rowIdx];
+      if (!row?.[step]) return;
+      const color = INSTRUMENT_COLORS[name]?.base;
+      if (color) colors.push(color);
+    });
+  }
+
+  return {
+    step,
+    running,
+    colors,
+    pulse: colors.length ? 0.55 + intensity * 0.9 : 0,
+  };
+}
+
+function drawBeatAura(beatVisual, intensity) {
+  if (!beatVisual.colors.length) return;
+
+  const left = beatVisual.colors[0];
+  const right = beatVisual.colors[1] || beatVisual.colors[0];
+  const power = 0.06 + beatVisual.pulse * 0.05;
+
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, 0,
+    width / 2, height / 2, width * 0.34
+  );
+  gradient.addColorStop(0, `rgba(${left[0]},${left[1]},${left[2]},${power})`);
+  gradient.addColorStop(0.5, `rgba(${right[0]},${right[1]},${right[2]},${power * 0.6})`);
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
 }
 
 // ─── Mirror overlay ───────────────────────────────────────────────────────
@@ -240,7 +319,7 @@ function drawNoise(intensity, tint) {
 
 // ─── Portal frame ────────────────────────────────────────────────────────
 
-function drawPortalFrame(intensity, tint) {
+function drawPortalFrame(intensity, tint, beatVisual) {
   const cx = width / 2;
   const cy = height / 2;
   const rx = width * 0.44;
@@ -248,6 +327,7 @@ function drawPortalFrame(intensity, tint) {
 
   const { r, g, b } = tint;
   const alpha = 0.08 + intensity * 0.08;
+  const edge = beatVisual.colors[0] || [r, g, b];
 
   // Boss puzzle phase: additional ring
   if (bossPhase === 'puzzle') {
@@ -261,7 +341,7 @@ function drawPortalFrame(intensity, tint) {
 
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+  ctx.strokeStyle = `rgba(${edge[0]},${edge[1]},${edge[2]},${alpha})`;
   ctx.lineWidth = 1;
   ctx.stroke();
 }

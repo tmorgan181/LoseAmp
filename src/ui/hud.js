@@ -9,15 +9,15 @@ let lastSignature = '';
 let rafId = null;
 
 const ITEM_LABELS = {
-  piano: 'piano',
-  bass: 'bass',
-  pad: 'pad',
-  noise: 'noise',
-  delay: 'delay',
-  distortion: 'distortion',
-  reverb: 'reverb',
-  filter: 'filter',
-  balanced: 'balanced',
+  piano: 'piano trace',
+  bass: 'bass trace',
+  pad: 'pad trace',
+  noise: 'noise trace',
+  delay: 'delay trace',
+  distortion: 'distortion trace',
+  reverb: 'reverb trace',
+  filter: 'filter trace',
+  balanced: 'balanced trace',
 };
 
 export function initHud() {
@@ -68,14 +68,14 @@ function renderInventoryBar() {
   if (!items.length) {
     const empty = document.createElement('span');
     empty.className = 'inventory-empty';
-    empty.textContent = 'nothing carried';
+    empty.textContent = 'no residue';
     bar.appendChild(empty);
   } else {
     items.forEach(item => {
-      const pill = document.createElement('span');
-      pill.className = 'inventory-item';
-      pill.textContent = item;
-      bar.appendChild(pill);
+      const fragment = document.createElement('span');
+      fragment.className = 'inventory-item';
+      fragment.textContent = item;
+      bar.appendChild(fragment);
     });
   }
 
@@ -112,15 +112,15 @@ function getAmbientTags() {
   const tags = [];
 
   if (state.soundboard.mirrorActive) {
-    tags.push('symmetry');
+    tags.push('symmetry held');
   }
 
   if (state.boss.phase === 'leadup') {
-    tags.push('threshold');
+    tags.push('threshold near');
   }
 
   if (state.boss.phase === 'puzzle') {
-    tags.push('hold');
+    tags.push('holding');
   }
 
   if (state.boss.escaped) {

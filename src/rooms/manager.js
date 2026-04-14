@@ -53,7 +53,6 @@ export function renderDoors() {
     btn.className = `door-btn ${vis}`;
     btn.dataset.room = name;
     btn.textContent = DOOR_LABELS[name] || name;
-    btn.title = name; // only shown on hover in browser, not on-screen text
 
     if (vis === 'locked') {
       btn.disabled = true;
