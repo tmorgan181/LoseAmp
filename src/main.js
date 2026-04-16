@@ -3,31 +3,36 @@
  * Entry point. Imports and wires all modules together.
  */
 
-import { configureState, loadState, state } from './state.js';
-import { initPortal } from './loseamp/portal.js';
+import { configureState, loadState, resetState, saveState, seedStarterBoard, state } from './state.js';
+import { initPortal, setMirrorActive } from './loseamp/portal.js';
 import { initControls } from './loseamp/controls.js';
 import { initLights }   from './loseamp/lights.js';
-import { initRooms }    from './rooms/manager.js';
-import { initAudio }    from './audio/engine.js';
+import { exitRoom, initRooms }    from './rooms/manager.js';
+import { initAudio, prepareAudio, stopSequencer, stopSpectrumVoice, updateFromState } from './audio/engine.js';
 import { initHud }      from './ui/hud.js';
 import { initDevTools } from './dev/tools.js';
+
+let panelResizeBound = false;
+let panelResizeState = null;
 
 function init() {
   const routeMode = window.location.pathname.includes('/demo') ? 'demo' : 'game';
 
   configureState(routeMode);
   loadState();
+  seedStarterBoard();
 
   const canvas = document.getElementById('loseamp-canvas');
   initPortal(canvas);
 
+  initRouteMode(routeMode);
   initControls();
   initLights();
   initRooms();
   initAudio();
   initHud();
   initDevTools();
-  initRouteMode(routeMode);
+  initControlPanelResizer();
 
   // Escape sequence complete
   window.addEventListener('loseamp:escaped', () => {
@@ -37,16 +42,25 @@ function init() {
 
 function initRouteMode(routeMode) {
   document.body.dataset.routeMode = routeMode;
+  const titleScreen = document.getElementById('title-screen');
 
   if (routeMode === 'demo') {
-    document.body.classList.add('demo-mode', 'awakened');
-    document.getElementById('title-screen')?.classList.add('hidden');
+    document.body.classList.remove('pre-awaken');
+    document.body.classList.add('awakened');
+    titleScreen?.classList.add('hidden');
+    document.body.classList.remove('app-loading');
     return;
   }
 
-  document.body.classList.add('game-mode', 'pre-awaken');
+  state.meta.awakened = false;
+  state.meta.titleDismissed = false;
+  document.body.classList.add('game-mode');
+  document.body.classList.remove('awakened');
+  document.body.classList.add('pre-awaken');
+  titleScreen?.classList.add('hidden');
   showTitleScreen();
-  bindWakeInteraction();
+
+  document.body.classList.remove('app-loading');
 }
 
 function showTitleScreen() {
@@ -55,31 +69,98 @@ function showTitleScreen() {
   if (!titleScreen || !startBtn) return;
 
   titleScreen.classList.remove('hidden');
-  requestAnimationFrame(() => titleScreen.classList.add('active'));
+  titleScreen.classList.add('active');
 
   startBtn.addEventListener('click', () => {
+    resetState('game');
+    seedStarterBoard();
     state.meta.titleDismissed = true;
+    document.body.classList.remove('awakened');
+    document.body.classList.add('pre-awaken');
+    initRooms();
+    updateFromState(state);
+    initControls();
+    initLights();
     titleScreen.classList.remove('active');
-    setTimeout(() => titleScreen.classList.add('hidden'), 500);
+    setTimeout(() => titleScreen.classList.add('hidden'), 240);
   }, { once: true });
 }
 
-function bindWakeInteraction() {
-  const portal = document.getElementById('portal-area');
-  if (!portal) return;
+function setPowerState(nextAwakened) {
+  state.meta.awakened = Boolean(nextAwakened);
 
-  portal.addEventListener('click', wakeLoseamp);
-}
-
-function wakeLoseamp() {
-  if (state.meta.routeMode !== 'game' || state.meta.awakened === true || !state.meta.titleDismissed) {
-    return;
+  if (state.meta.awakened) {
+    prepareAudio();
   }
 
-  state.meta.awakened = true;
-  document.body.classList.remove('pre-awaken');
-  document.body.classList.add('awakened');
+  if (!state.meta.awakened) {
+    stopSequencer();
+    stopSpectrumVoice();
+    state.soundboard.mirrorActive = false;
+    setMirrorActive(false);
+    if (state.currentScreen !== 'hub') {
+      exitRoom();
+    }
+  }
+
+  document.body.classList.toggle('pre-awaken', !state.meta.awakened);
+  document.body.classList.toggle('awakened', state.meta.awakened);
+
   initRooms();
+  saveState();
+  updateFromState(state);
+  initControls();
+  initLights();
+}
+
+function togglePower() {
+  setPowerState(!state.meta.awakened);
+}
+
+window.addEventListener('loseamp:power-on', () => setPowerState(true));
+document.addEventListener('loseamp:power-on', () => setPowerState(true));
+window.loseampPowerOn = () => setPowerState(true);
+window.loseampTogglePower = togglePower;
+
+function initControlPanelResizer() {
+  if (panelResizeBound) return;
+
+  const hub = document.getElementById('hub');
+  const handle = document.getElementById('control-panel-resizer');
+  if (!hub || !handle) return;
+
+  panelResizeBound = true;
+
+  handle.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    panelResizeState = {
+      pointerId: event.pointerId,
+      hub,
+    };
+    document.body.classList.add('control-panel-resizing');
+    handle.setPointerCapture?.(event.pointerId);
+  });
+
+  window.addEventListener('pointermove', onControlPanelResize);
+  window.addEventListener('pointerup', stopControlPanelResize);
+  window.addEventListener('pointercancel', stopControlPanelResize);
+}
+
+function onControlPanelResize(event) {
+  if (!panelResizeState || event.pointerId !== panelResizeState.pointerId) return;
+
+  const minHeight = Math.max(300, Math.round(window.innerHeight * 0.3));
+  const maxHeight = Math.max(minHeight + 40, Math.round(window.innerHeight * 0.72));
+  const nextHeight = clamp(window.innerHeight - event.clientY, minHeight, maxHeight);
+  panelResizeState.hub.style.setProperty('--control-panel-height', `${nextHeight}px`);
+}
+
+function stopControlPanelResize(event) {
+  if (!panelResizeState) return;
+  if (event && event.pointerId !== undefined && event.pointerId !== panelResizeState.pointerId) return;
+
+  document.body.classList.remove('control-panel-resizing');
+  panelResizeState = null;
 }
 
 function showEndScreen() {
@@ -110,6 +191,10 @@ function showEndScreen() {
       setTimeout(() => { again.classList.add('revealed'); }, 2200);
     });
   });
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 init();

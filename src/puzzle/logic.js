@@ -79,11 +79,11 @@ export function evaluateDoors(state) {
  * This is the condition that makes the Threshold door appear.
  */
 function isMiddleState(sb) {
-  const bpmOk = sb.bpm >= 65 && sb.bpm <= 80;
-  const hasInstruments = sb.activeInstruments.length >= 1 && sb.activeInstruments.length <= 3;
-  const notLoud = sb.effects.distortion < 0.5;
-  const lightsOk = sb.lights.warm > 0 || sb.lights.cool > 0;
-  return bpmOk && hasInstruments && notLoud && lightsOk;
+  const bpmOk = sb.bpm >= 68 && sb.bpm <= 78;
+  const hasTone = sb.activeInstruments.includes('piano') || sb.activeInstruments.includes('bass');
+  const notLoud = sb.effects.distortion === 0;
+  const lightsOk = sb.lights.warm > 0.3 && sb.lights.cool > 0.3;
+  return bpmOk && hasTone && notLoud && lightsOk;
 }
 
 // ─── Puzzle State Check ─────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ export function checkPuzzleState(state) {
   if (!state.boss.active) return;
   if (state.boss.phase !== 'puzzle') return;
 
-  if (isConcertSolved(state.soundboard)) {
+  if (isConcertSolved(state)) {
     if (!state.boss.holdStart) {
       state.boss.holdStart = Date.now();
       startHoldTimer(state);
@@ -130,7 +130,8 @@ function clearHoldTimer() {
  * isConcertSolved(soundboard)
  * The answer: the middle path. Held.
  */
-export function isConcertSolved(sb) {
+export function isConcertSolved(state) {
+  const sb = state.soundboard;
   const bpmOk     = sb.bpm >= 70 && sb.bpm <= 75;
   const instrOk   = arraysMatch(sb.activeInstruments, ['piano', 'bass']);
   const reverbOk  = sb.effects.reverb >= 0.3 && sb.effects.reverb <= 0.6;
@@ -140,8 +141,26 @@ export function isConcertSolved(sb) {
   const lightsOk  = sb.lights.warm >= 0.4 && sb.lights.warm <= 0.6
                  && sb.lights.cool >= 0.4 && sb.lights.cool <= 0.6
                  && sb.lights.mode !== 'strobe' && sb.lights.mode !== 'pulse';
+  const seqOk     = sequenceMatches(state);
 
-  return bpmOk && instrOk && reverbOk && delayOk && distortOk && filterOk && lightsOk;
+  return bpmOk && instrOk && reverbOk && delayOk && distortOk && filterOk && lightsOk && seqOk;
+}
+
+function sequenceMatches(state) {
+  const REQUIRED = [1, 5, 9, 13];
+  const instrList = state.unlocks.instruments;
+  const pianoRow  = instrList.indexOf('piano');
+  const bassRow   = instrList.indexOf('bass');
+
+  for (const rowIdx of [pianoRow, bassRow]) {
+    if (rowIdx < 0) return false;
+    const row = state.soundboard.sequence[rowIdx];
+    if (!row) return false;
+    for (const step of REQUIRED) {
+      if (!row[step]) return false;
+    }
+  }
+  return true;
 }
 
 function arraysMatch(a, b) {
