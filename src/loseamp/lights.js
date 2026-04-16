@@ -3,9 +3,9 @@
  * Stage lighting system for the Loseamp hub.
  */
 
-import { state, saveState } from '../state.js';
+import { SUPPORTED_LIGHT_MODES, state, saveState } from '../state.js';
 import { checkPuzzleState } from '../puzzle/logic.js';
-import { updateMirrorAvailability } from './controls.js';
+import { enhanceDockablePanels, updateMirrorAvailability } from './controls.js';
 
 const MODE_LABELS = {
   off:      'off',
@@ -15,12 +15,13 @@ const MODE_LABELS = {
   pulse:    'pulse',
   strobe:   'strobe',
 };
-const MODE_ORDER = ['off', 'warm', 'cool', 'balanced', 'pulse', 'strobe'];
+const MODE_ORDER = ['off', ...SUPPORTED_LIGHT_MODES];
 
 export function initLights() {
   renderLightControls();
   applyLights();
   updateMirrorAvailability();
+  enhanceDockablePanels();
 }
 
 function renderLightControls() {
@@ -33,22 +34,47 @@ function renderLightControls() {
   label.textContent = 'light';
   panel.appendChild(label);
 
+  const ambience = document.createElement('section');
+  ambience.className = 'rack-module rack-module-light';
+
+  const ambienceTitle = document.createElement('div');
+  ambienceTitle.className = 'rack-module-title';
+  ambienceTitle.textContent = 'ambience';
+  ambience.appendChild(ambienceTitle);
+
+  const ambienceBody = document.createElement('div');
+  ambienceBody.className = 'rack-module-body';
+  ambience.appendChild(ambienceBody);
+
   // Warm slider
-  panel.appendChild(makeSlider('warm', state.soundboard.lights.warm, val => {
+  ambienceBody.appendChild(makeSlider('warm', state.soundboard.lights.warm, val => {
     state.soundboard.lights.warm = val;
     onChange();
   }));
 
   // Cool slider
-  panel.appendChild(makeSlider('cool', state.soundboard.lights.cool, val => {
+  ambienceBody.appendChild(makeSlider('cool', state.soundboard.lights.cool, val => {
     state.soundboard.lights.cool = val;
     onChange();
   }));
+  panel.appendChild(ambience);
 
   // Mode buttons
   const modesWrap = document.createElement('div');
   modesWrap.id = 'light-modes';
-  modesWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;';
+  modesWrap.className = 'light-modes';
+
+  const scenes = document.createElement('section');
+  scenes.className = 'rack-module rack-module-light rack-module-scenes';
+
+  const scenesTitle = document.createElement('div');
+  scenesTitle.className = 'rack-module-title';
+  scenesTitle.textContent = 'scenes';
+  scenes.appendChild(scenesTitle);
+
+  const scenesBody = document.createElement('div');
+  scenesBody.className = 'rack-module-body';
+  scenes.appendChild(scenesBody);
 
   const modes = [
     'off',
@@ -63,30 +89,31 @@ function renderLightControls() {
     btn.className = 'light-mode-btn';
     btn.dataset.mode = mode;
     btn.textContent = MODE_LABELS[mode];
-    btn.style.cssText = 'font-size:10px;padding:3px 6px;';
     if (state.soundboard.lights.mode === mode) btn.classList.add('active');
 
     btn.addEventListener('click', () => setMode(mode));
     modesWrap.appendChild(btn);
   });
 
-  panel.appendChild(modesWrap);
+  scenesBody.appendChild(modesWrap);
+  panel.appendChild(scenes);
 }
 
 function makeSlider(name, initial, onInput) {
   const row = document.createElement('div');
-  row.style.cssText = 'margin-bottom:8px;';
+  row.className = 'light-row';
 
   const lbl = document.createElement('label');
+  lbl.className = 'light-label';
   lbl.textContent = name;
-  lbl.style.cssText = 'display:block;margin-bottom:3px;';
 
   const valDisp = document.createElement('span');
-  valDisp.style.cssText = 'float:right;color:var(--fg-muted);font-size:10px;';
+  valDisp.className = 'light-val';
   valDisp.textContent = initial.toFixed(2);
   lbl.appendChild(valDisp);
 
   const slider = document.createElement('input');
+  slider.className = 'light-slider';
   slider.type = 'range';
   slider.min = '0';
   slider.max = '1';

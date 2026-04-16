@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../styles/loseamp.css" />
   <link rel="stylesheet" href="../styles/rooms.css" />
 </head>
-<body>
+<body class="app-loading">
 
   <div id="title-screen" class="hidden"></div>
 
@@ -32,6 +32,9 @@
     </main>
 
     <section id="control-panel">
+      <div id="control-panel-resizer" role="separator" aria-orientation="horizontal" aria-label="resize control panel">
+        <span class="control-panel-resizer-grip" aria-hidden="true"></span>
+      </div>
       <div id="instruments-panel"></div>
       <div id="sequencer-panel"></div>
       <div id="effects-panel"></div>

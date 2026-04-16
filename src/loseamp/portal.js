@@ -80,15 +80,26 @@ function loop() {
 
 function getIntensity() {
   const signal = getSignalLevel();
-  if (signal > 0) return signal;
+  if (signal > 0) {
+    return Math.min(1, signal * 1.55 + (isSequencerRunning() ? 0.16 : 0));
+  }
   if (document.body.classList.contains('pre-awaken')) {
-    return 0.14 + (Math.sin(demoT * 0.7) * 0.5 + 0.5) * 0.08;
+    return 0.035 + (Math.sin(demoT * 0.28) * 0.5 + 0.5) * 0.028;
   }
   // Demo fallback
-  return Math.sin(demoT) * 0.5 + 0.5;
+  const demoBase = Math.sin(demoT) * 0.5 + 0.5;
+  return isSequencerRunning() ? Math.min(1, demoBase * 1.18 + 0.2) : demoBase;
 }
 
 function getColor(intensity) {
+  if (document.body.classList.contains('pre-awaken')) {
+    return {
+      r: 156,
+      g: 44,
+      b: 56,
+    };
+  }
+
   // Apply boss tint: leadup shifts toward cooler
   const bossTint = bossPhase === 'leadup' ? 0.4 : bossPhase === 'puzzle' ? 0.7 : 0;
 
@@ -252,11 +263,13 @@ function getBeatVisualState(intensity) {
 }
 
 function drawBeatAura(beatVisual, intensity) {
-  if (!beatVisual.colors.length) return;
+  if (!beatVisual.colors.length && !beatVisual.running) return;
 
-  const left = beatVisual.colors[0];
-  const right = beatVisual.colors[1] || beatVisual.colors[0];
-  const power = 0.06 + beatVisual.pulse * 0.05;
+  const left = beatVisual.colors[0] || [108, 126, 138];
+  const right = beatVisual.colors[1] || beatVisual.colors[0] || [82, 102, 116];
+  const power = beatVisual.colors.length
+    ? 0.1 + beatVisual.pulse * 0.09
+    : 0.03 + intensity * 0.02;
 
   const gradient = ctx.createRadialGradient(
     width / 2, height / 2, 0,
@@ -267,6 +280,17 @@ function drawBeatAura(beatVisual, intensity) {
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
+
+  if (beatVisual.running) {
+    const frameGradient = ctx.createLinearGradient(0, height * 0.82, width, height * 0.82);
+    frameGradient.addColorStop(0, 'rgba(0,0,0,0)');
+    frameGradient.addColorStop(0.18, `rgba(${left[0]},${left[1]},${left[2]},${0.06 + beatVisual.pulse * 0.04})`);
+    frameGradient.addColorStop(0.5, `rgba(${right[0]},${right[1]},${right[2]},${0.08 + beatVisual.pulse * 0.05})`);
+    frameGradient.addColorStop(0.82, `rgba(${left[0]},${left[1]},${left[2]},${0.06 + beatVisual.pulse * 0.04})`);
+    frameGradient.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = frameGradient;
+    ctx.fillRect(width * 0.12, height * 0.8, width * 0.76, 2 + beatVisual.pulse * 2.5);
+  }
 }
 
 // ─── Mirror overlay ───────────────────────────────────────────────────────
@@ -326,7 +350,7 @@ function drawPortalFrame(intensity, tint, beatVisual) {
   const ry = height * 0.40;
 
   const { r, g, b } = tint;
-  const alpha = 0.08 + intensity * 0.08;
+  const alpha = 0.11 + intensity * 0.12 + (beatVisual.running ? 0.04 : 0);
   const edge = beatVisual.colors[0] || [r, g, b];
 
   // Boss puzzle phase: additional ring
@@ -342,8 +366,19 @@ function drawPortalFrame(intensity, tint, beatVisual) {
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.strokeStyle = `rgba(${edge[0]},${edge[1]},${edge[2]},${alpha})`;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = beatVisual.running ? 1.65 : 1;
+  ctx.shadowColor = `rgba(${edge[0]},${edge[1]},${edge[2]},${alpha * 0.6})`;
+  ctx.shadowBlur = beatVisual.running ? 22 + beatVisual.pulse * 18 : 8;
   ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  if (beatVisual.running) {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx * 0.82, ry * 0.8, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${edge[0]},${edge[1]},${edge[2]},${0.05 + beatVisual.pulse * 0.08})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
 }
 
 // ─── Middle glow ──────────────────────────────────────────────────────────

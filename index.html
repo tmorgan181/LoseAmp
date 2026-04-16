@@ -9,13 +9,13 @@
   <link rel="stylesheet" href="styles/loseamp.css" />
   <link rel="stylesheet" href="styles/rooms.css" />
 </head>
-<body>
+<body class="app-loading">
 
-  <div id="title-screen" class="hidden">
+  <div id="title-screen" class="active">
     <div class="title-shell">
       <p class="title-kicker">an instrument for leaving</p>
       <h1 class="title-word">LoseAmp</h1>
-      <p class="title-copy">Touch the quiet thing in the center when you are ready.</p>
+      <p class="title-copy">Begin when you are ready. The quiet thing in the center will wake with you.</p>
       <div class="title-actions">
         <button id="title-start" type="button">begin</button>
         <a class="title-demo-link" href="./demo/">demo rig</a>
@@ -48,6 +48,9 @@
     </main>
 
     <section id="control-panel">
+      <div id="control-panel-resizer" role="separator" aria-orientation="horizontal" aria-label="resize control panel">
+        <span class="control-panel-resizer-grip" aria-hidden="true"></span>
+      </div>
       <div id="instruments-panel"></div>
       <div id="sequencer-panel"></div>
       <div id="effects-panel"></div>
