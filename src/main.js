@@ -30,6 +30,7 @@ function init() {
   initLights();
   initRooms();
   initAudio();
+  updateFromState(state);
   initHud();
   initDevTools();
   initControlPanelResizer();

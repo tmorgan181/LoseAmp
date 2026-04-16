@@ -10,6 +10,7 @@ let audioCtx = null;
 let masterGain = null;
 let analyser = null;
 let liveVoice = null;
+let pendingSpectrumConfig = null;
 
 let sequencerTimer = null;
 let currentStep = 0;
@@ -114,20 +115,25 @@ export function getCurrentSequencerStep() {
 }
 
 export function startSpectrumVoice(config) {
+  pendingSpectrumConfig = config;
   runWithAudioReady(() => {
     if (!audioCtx || !analyser) return;
+    const cfg = pendingSpectrumConfig;
+    if (!cfg) return; // pointer released before context was ready
+    pendingSpectrumConfig = null;
     stopSpectrumVoice();
-    liveVoice = createSpectrumVoice(config);
+    liveVoice = createSpectrumVoice(cfg);
   });
 }
 
 export function updateSpectrumVoice(config) {
+  pendingSpectrumConfig = config;
   if (!liveVoice || !audioCtx) return;
 
   const now = audioCtx.currentTime;
   const targetFreq = Math.max(40, config.freq || 220);
   const targetBrightness = clamp(config.brightness ?? 0.45, 0, 1);
-  const targetLevel = clamp(config.level ?? 0.24, 0.08, 0.42);
+  const targetLevel = clamp(config.level ?? 0.55, 0.3, 0.8);
 
   liveVoice.filter.frequency.cancelScheduledValues(now);
   liveVoice.filter.frequency.setTargetAtTime(300 + targetBrightness * 5200, now, 0.03);
@@ -142,6 +148,7 @@ export function updateSpectrumVoice(config) {
 }
 
 export function stopSpectrumVoice() {
+  pendingSpectrumConfig = null;
   if (!liveVoice || !audioCtx) return;
 
   const { oscillators, gain } = liveVoice;
@@ -222,27 +229,21 @@ function createSpectrumVoice(config) {
   const now = audioCtx.currentTime;
   const baseFreq = Math.max(40, config.freq || 220);
   const brightness = clamp(config.brightness ?? 0.45, 0, 1);
-  const level = clamp(config.level ?? 0.24, 0.08, 0.42);
+  const level = clamp(config.level ?? 0.55, 0.3, 0.8);
 
   const mix = audioCtx.createGain();
   const filter = audioCtx.createBiquadFilter();
   const gain = audioCtx.createGain();
-  const output = createVoiceOutput({
-    reverb: 0.22,
-    delay: 0.12,
-    distortion: 0.04,
-    filter: 0.7,
-    level,
-  }, now, 1.2);
+
   filter.type = 'bandpass';
   filter.frequency.value = 300 + brightness * 5200;
   filter.Q.value = 0.9 + brightness * 4;
   gain.gain.value = 0.0001;
 
   const oscillators = [
-    { type: 'sine', ratio: 1, amp: 0.82 },
-    { type: 'triangle', ratio: 2, amp: 0.34 },
-    { type: 'sawtooth', ratio: 3, amp: 0.18 },
+    { type: 'sine',     ratio: 1, amp: 0.72 },
+    { type: 'triangle', ratio: 2, amp: 0.22 },
+    { type: 'sawtooth', ratio: 3, amp: 0.10 },
   ].map(partial => {
     const osc = audioCtx.createOscillator();
     const oscGain = audioCtx.createGain();
@@ -257,7 +258,7 @@ function createSpectrumVoice(config) {
 
   mix.connect(filter);
   filter.connect(gain);
-  gain.connect(output.input);
+  gain.connect(analyser);
   gain.gain.setTargetAtTime(level, now, 0.03);
 
   return { oscillators, filter, gain };

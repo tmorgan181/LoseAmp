@@ -445,7 +445,7 @@ body.control-panel-resizing * {
 
 .sequence-topdeck {
   display: grid;
-  grid-template-columns: minmax(170px, 0.56fr) minmax(0, 1.44fr);
+  grid-template-columns: minmax(0, 1.44fr) minmax(120px, 0.56fr);
   gap: 6px;
   align-items: stretch;
 }
@@ -684,41 +684,43 @@ body.control-panel-resizing * {
 }
 
 .power-switch.sleeping {
-  border-color: rgba(236, 98, 114, 0.64);
+  border-color: rgba(255, 96, 116, 0.92);
   background:
-    linear-gradient(180deg, rgba(52, 18, 24, 0.99), rgba(28, 8, 12, 0.998));
+    linear-gradient(180deg, rgba(96, 18, 28, 0.98), rgba(64, 8, 16, 0.99));
   box-shadow:
-    inset 0 1px 0 rgba(255, 228, 232, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.38),
-    inset 0 0 0 1px rgba(88, 22, 34, 0.96),
-    0 0 24px rgba(180, 24, 48, 0.24);
+    inset 0 1px 0 rgba(255, 228, 232, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(140, 28, 44, 0.92),
+    0 0 32px rgba(255, 32, 64, 0.72),
+    0 0 64px rgba(220, 16, 48, 0.38),
+    0 0 6px  rgba(255, 200, 210, 0.5);
 }
 
 .power-switch.sleeping .power-switch-mark {
-  color: rgba(255, 212, 218, 0.94);
-  text-shadow: 0 0 10px rgba(255, 116, 132, 0.28);
+  color: rgba(255, 220, 226, 1);
+  text-shadow: 0 0 8px rgba(255, 100, 120, 0.72);
 }
 
 .power-switch.sleeping .power-switch-lever {
-  border-color: rgba(244, 176, 186, 0.58);
+  border-color: rgba(255, 192, 204, 0.78);
   background:
-    linear-gradient(180deg, rgba(255, 230, 234, 0.96), rgba(176, 98, 112, 0.96));
+    linear-gradient(180deg, rgba(255, 240, 244, 1), rgba(220, 96, 116, 0.98));
   box-shadow:
     0 1px 6px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 244, 246, 0.28);
+    inset 0 1px 0 rgba(255, 252, 253, 0.42);
 }
 
 .power-switch.sleeping .power-switch-lamp {
   width: 6px;
   height: 6px;
-  border-color: rgba(255, 196, 204, 0.98);
+  border-color: rgba(255, 210, 218, 1);
   background:
-    radial-gradient(circle at 40% 40%, rgba(255, 248, 250, 1), rgba(255, 118, 138, 1) 28%, rgba(236, 34, 66, 0.98) 54%, rgba(136, 8, 26, 1) 80%);
+    radial-gradient(circle at 40% 40%, rgba(255, 252, 254, 1), rgba(255, 118, 138, 1) 28%, rgba(236, 34, 66, 0.98) 54%, rgba(136, 8, 26, 1) 80%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 248, 250, 0.18),
-    0 0 30px rgba(255, 46, 78, 0.94),
-    0 0 16px rgba(255, 162, 176, 0.72),
-    0 0 5px rgba(255, 242, 244, 0.5);
+    inset 0 0 0 1px rgba(255, 252, 254, 0.22),
+    0 0 36px rgba(255, 46, 78, 1),
+    0 0 20px rgba(255, 162, 176, 0.88),
+    0 0 7px  rgba(255, 248, 250, 0.72);
   transform: scale(1.18);
   animation: power-standby-pulse 1.35s ease-in-out infinite;
 }
@@ -754,18 +756,18 @@ body.control-panel-resizing * {
   0%, 100% {
     transform: scale(1);
     box-shadow:
-      inset 0 0 0 1px rgba(255, 242, 244, 0.18),
-      0 0 24px rgba(255, 52, 84, 0.84),
-      0 0 12px rgba(255, 176, 188, 0.62),
-      0 0 4px rgba(255, 242, 244, 0.4);
+      inset 0 0 0 1px rgba(255, 242, 244, 0.22),
+      0 0 32px rgba(255, 42, 74, 0.92),
+      0 0 16px rgba(255, 176, 192, 0.72),
+      0 0 5px  rgba(255, 246, 248, 0.52);
   }
   50% {
-    transform: scale(1.3);
+    transform: scale(1.36);
     box-shadow:
-      inset 0 0 0 1px rgba(255, 248, 249, 0.24),
-      0 0 40px rgba(255, 68, 96, 1),
-      0 0 22px rgba(255, 198, 208, 0.92),
-      0 0 8px rgba(255, 248, 250, 0.62);
+      inset 0 0 0 1px rgba(255, 250, 252, 0.3),
+      0 0 52px rgba(255, 56, 90, 1),
+      0 0 28px rgba(255, 200, 214, 1),
+      0 0 10px rgba(255, 250, 252, 0.82);
   }
 }
 
@@ -778,6 +780,9 @@ body.pre-awaken .rack-module-power,
 body.pre-awaken .power-module {
   opacity: 1;
   filter: none;
+  box-shadow:
+    0 0 48px rgba(255, 32, 64, 0.44),
+    0 0 96px rgba(220, 16, 48, 0.18);
 }
 
 body.pre-awaken .rack-module-power,
@@ -832,7 +837,7 @@ body.pre-awaken .power-switch * {
   --spectrum-y: 0.5;
   position: relative;
   display: grid;
-  grid-template-columns: repeat(18, minmax(0, 1fr));
+  grid-template-columns: repeat(11, minmax(0, 1fr));
   gap: 3px;
   height: 110px;
   padding: 6px;
@@ -840,7 +845,7 @@ body.pre-awaken .power-switch * {
   border: 1px solid rgba(104, 118, 138, 0.22);
   background:
     radial-gradient(circle at calc(var(--spectrum-x) * 100%) calc(var(--spectrum-y) * 100%), rgba(90, 128, 118, 0.22), transparent 28%),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 20px),
     linear-gradient(180deg, rgba(12, 14, 20, 0.98), rgba(10, 11, 16, 0.98));
   cursor: crosshair;
   overflow: hidden;
@@ -1756,7 +1761,7 @@ body.pre-awaken .power-switch * {
   }
 
   .sequence-topdeck {
-    grid-template-columns: minmax(130px, 0.7fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 0.7fr);
   }
 }
 

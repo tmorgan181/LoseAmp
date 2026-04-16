@@ -168,42 +168,51 @@ function renderInstruments() {
   });
   panel.appendChild(voicesRack.shell);
 
-  const analyzerRack = createRackModule('analyzer', 'rack-module-spectrum');
-  const spectrum = document.createElement('div');
-  spectrum.className = 'spectrum-control';
-  spectrum.innerHTML = `
-    <div class="spectrum-header">
-      <span class="spectrum-title">spectrum</span>
-      <span class="spectrum-hint">click and drag</span>
-    </div>
-    <div class="spectrum-pad" role="application" aria-label="spectrum melody control"></div>
-    <div class="spectrum-footer">
-      <span>low</span>
-      <span>bright</span>
-      <span>high</span>
-    </div>
-  `;
+  const tempoRack = createRackModule('tempo', 'rack-module-compact', 'rack-module-tempo');
+  const tempoModule = document.createElement('div');
+  tempoModule.className = 'tempo-module';
 
-  const spectrumPad = spectrum.querySelector('.spectrum-pad');
-  if (spectrumPad) {
-    for (let i = 0; i < 18; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'spectrum-cell';
-      if (i % 3 === 0) cell.classList.add('major');
-      spectrumPad.appendChild(cell);
-    }
+  const minus = document.createElement('button');
+  minus.className = 'bpm-nudge';
+  minus.type = 'button';
+  minus.textContent = '−';
+  minus.addEventListener('click', () => changeBpm(-1));
 
-    spectrumPad.addEventListener('pointerdown', onSpectrumPointerDown);
-    spectrumPad.addEventListener('pointermove', onSpectrumPointerMove);
-    spectrumPad.addEventListener('pointerup', onSpectrumPointerUp);
-    spectrumPad.addEventListener('pointercancel', onSpectrumPointerUp);
-    spectrumPad.addEventListener('pointerleave', event => {
-      if (event.buttons === 0) onSpectrumPointerUp(event);
-    });
-  }
+  const bpmDisplay = document.createElement('span');
+  bpmDisplay.id = 'bpm-display';
+  bpmDisplay.textContent = state.soundboard.bpm;
 
-  analyzerRack.body.appendChild(spectrum);
-  panel.appendChild(analyzerRack.shell);
+  const bpmUnit = document.createElement('span');
+  bpmUnit.className = 'tempo-unit';
+  bpmUnit.textContent = 'bpm';
+
+  const plus = document.createElement('button');
+  plus.className = 'bpm-nudge';
+  plus.type = 'button';
+  plus.textContent = '+';
+  plus.addEventListener('click', () => changeBpm(1));
+
+  const bpmReadout = document.createElement('div');
+  bpmReadout.className = 'tempo-readout';
+  bpmReadout.append(bpmDisplay, bpmUnit);
+
+  const bpmWell = document.createElement('div');
+  bpmWell.className = 'tempo-well';
+  bpmWell.append(minus, bpmReadout, plus);
+
+  const bpmSlider = document.createElement('input');
+  bpmSlider.type = 'range';
+  bpmSlider.id = 'bpm-slider';
+  bpmSlider.className = 'bpm-slider';
+  bpmSlider.min = String(state.unlocks.bpmRange[0]);
+  bpmSlider.max = String(state.unlocks.bpmRange[1]);
+  bpmSlider.step = '1';
+  bpmSlider.value = String(state.soundboard.bpm);
+  bpmSlider.addEventListener('input', () => setBpm(bpmSlider.value));
+
+  tempoModule.append(bpmWell, bpmSlider);
+  tempoRack.body.appendChild(tempoModule);
+  panel.appendChild(tempoRack.shell);
 
   // Mirror toggle — appears after Room 1 (bright) is cleared
   if (state.rooms.bright.cleared) {
@@ -290,74 +299,41 @@ function renderSequencer() {
   const topDeck = document.createElement('div');
   topDeck.className = 'sequence-topdeck';
 
-  const tempoRack = createRackModule('tempo', 'rack-module-sequence', 'rack-module-tempo');
-  const tempoModule = document.createElement('div');
-  tempoModule.className = 'tempo-module';
+  const spectrumRack = createRackModule('spectrum', 'rack-module-spectrum');
+  const spectrum = document.createElement('div');
+  spectrum.className = 'spectrum-control';
+  spectrum.innerHTML = `
+    <div class="spectrum-header">
+      <span class="spectrum-title">melody</span>
+      <span class="spectrum-hint">click and drag</span>
+    </div>
+    <div class="spectrum-pad" role="application" aria-label="spectrum melody control"></div>
+    <div class="spectrum-footer">
+      <span>A2</span>
+      <span>—</span>
+      <span>A4</span>
+    </div>
+  `;
 
-  const minus = document.createElement('button');
-  minus.className = 'bpm-nudge';
-  minus.type = 'button';
-  minus.textContent = '−';
-  minus.addEventListener('click', () => changeBpm(-1));
-
-  const bpmDisplay = document.createElement('span');
-  bpmDisplay.id = 'bpm-display';
-  bpmDisplay.textContent = state.soundboard.bpm;
-
-  const bpmUnit = document.createElement('span');
-  bpmUnit.className = 'tempo-unit';
-  bpmUnit.textContent = 'bpm';
-
-  const bpmInput = document.createElement('input');
-  bpmInput.type = 'number';
-  bpmInput.id = 'bpm-input';
-  bpmInput.className = 'bpm-input';
-  bpmInput.min = String(state.unlocks.bpmRange[0]);
-  bpmInput.max = String(state.unlocks.bpmRange[1]);
-  bpmInput.step = '1';
-  bpmInput.value = String(state.soundboard.bpm);
-  bpmInput.addEventListener('input', () => setBpm(bpmInput.value));
-  bpmInput.addEventListener('keydown', event => {
-    if (event.key === 'Enter') {
-      setBpm(bpmInput.value);
-      bpmInput.blur();
+  const spectrumPad = spectrum.querySelector('.spectrum-pad');
+  if (spectrumPad) {
+    for (let i = 0; i < SPECTRUM_SCALE.length; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'spectrum-cell';
+      if (i % 5 === 0) cell.classList.add('major');
+      spectrumPad.appendChild(cell);
     }
-  });
 
-  const plus = document.createElement('button');
-  plus.className = 'bpm-nudge';
-  plus.type = 'button';
-  plus.textContent = '+';
-  plus.addEventListener('click', () => changeBpm(1));
+    spectrumPad.addEventListener('pointerdown', onSpectrumPointerDown);
+    spectrumPad.addEventListener('pointermove', onSpectrumPointerMove);
+    spectrumPad.addEventListener('pointerup', onSpectrumPointerUp);
+    spectrumPad.addEventListener('pointercancel', onSpectrumPointerUp);
+    spectrumPad.addEventListener('pointerleave', event => {
+      if (event.buttons === 0) onSpectrumPointerUp(event);
+    });
+  }
 
-  const bpmReadout = document.createElement('div');
-  bpmReadout.className = 'tempo-readout';
-  bpmReadout.append(bpmDisplay, bpmUnit);
-
-  const bpmWell = document.createElement('div');
-  bpmWell.className = 'tempo-well';
-  bpmWell.append(minus, bpmReadout, plus);
-
-  const bpmSlider = document.createElement('input');
-  bpmSlider.type = 'range';
-  bpmSlider.id = 'bpm-slider';
-  bpmSlider.className = 'bpm-slider';
-  bpmSlider.min = String(state.unlocks.bpmRange[0]);
-  bpmSlider.max = String(state.unlocks.bpmRange[1]);
-  bpmSlider.step = '1';
-  bpmSlider.value = String(state.soundboard.bpm);
-  bpmSlider.addEventListener('input', () => setBpm(bpmSlider.value));
-
-  const bpmInputWrap = document.createElement('label');
-  bpmInputWrap.className = 'tempo-input-wrap';
-
-  const bpmInputLabel = document.createElement('span');
-  bpmInputLabel.className = 'tempo-input-label';
-  bpmInputLabel.textContent = 'set';
-
-  bpmInputWrap.append(bpmInputLabel, bpmInput);
-  tempoModule.append(bpmWell, bpmSlider, bpmInputWrap);
-  tempoRack.body.appendChild(tempoModule);
+  spectrumRack.body.appendChild(spectrum);
 
   const transport = document.createElement('div');
   transport.className = 'transport-row';
@@ -437,7 +413,7 @@ function renderSequencer() {
   transportBlock.append(transport, clearBtn, presets);
   transportRack.body.appendChild(transportBlock);
 
-  topDeck.append(tempoRack.shell, transportRack.shell);
+  topDeck.append(spectrumRack.shell, transportRack.shell);
   panel.appendChild(topDeck);
 
   // Step grid
@@ -588,32 +564,30 @@ function getSpectrumVoiceConfig(event, pad) {
   return {
     freq: note.freq,
     brightness: 1 - y,
-    level: 0.1 + (1 - y) * 0.1,
+    level: 0.5 + (1 - y) * 0.25,
     noteLabel: note.label,
     x,
     y,
   };
 }
 
+const SPECTRUM_SCALE = [
+  ['A2', 110.0],
+  ['C3', 130.81],
+  ['D3', 146.83],
+  ['E3', 164.81],
+  ['G3', 196.0],
+  ['A3', 220.0],
+  ['C4', 261.63],
+  ['D4', 293.66],
+  ['E4', 329.63],
+  ['G4', 392.0],
+  ['A4', 440.0],
+];
+
 function getSpectrumFrequency(x) {
-  const scale = [
-    ['A2', 110.0],
-    ['C3', 130.81],
-    ['D3', 146.83],
-    ['E3', 164.81],
-    ['G3', 196.0],
-    ['A3', 220.0],
-    ['C4', 261.63],
-    ['D4', 293.66],
-    ['E4', 329.63],
-    ['G4', 392.0],
-    ['A4', 440.0],
-    ['C5', 523.25],
-    ['D5', 587.33],
-    ['E5', 659.25],
-  ];
-  const index = Math.min(scale.length - 1, Math.floor(x * scale.length));
-  const [label, freq] = scale[index];
+  const index = Math.min(SPECTRUM_SCALE.length - 1, Math.floor(x * SPECTRUM_SCALE.length));
+  const [label, freq] = SPECTRUM_SCALE[index];
   return { label, freq };
 }
 
