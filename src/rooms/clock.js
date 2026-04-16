@@ -19,7 +19,6 @@ const PEAK_WINDOW_MS = 180;
 const STEPS = 16;
 const PATTERN = [1, 5, 9, 13]; // four-on-the-floor, 0-indexed
 
-let intervalId = null;
 let animFrame = null;
 let beatWindowOpen = false;
 let lastBeatTime = 0;
@@ -39,6 +38,17 @@ export function enterClock(state) {
   back.textContent = '←';
   back.addEventListener('click', exitClock);
   el.appendChild(back);
+
+  // Entry hint — show once, then never again
+  if (!state.rooms.clock.flags.hintShown) {
+    state.rooms.clock.flags.hintShown = true;
+    const hint = document.createElement('div');
+    hint.className = 'room-hint';
+    hint.textContent = 'click at the peak';
+    el.appendChild(hint);
+    setTimeout(() => hint.classList.add('visible'), 600);
+    setTimeout(() => hint.classList.remove('visible'), 5000);
+  }
 
   // Counter — prominent, top right
   const counter = document.createElement('div');
@@ -115,15 +125,8 @@ export function enterClock(state) {
 
   canvas.addEventListener('click', () => onPlayerAction(state));
 
-  // Start rhythm
+  // Draw + rhythm loop — single rAF clock drives both visual and hit window
   lastBeatTime = performance.now();
-  intervalId = setInterval(() => {
-    lastBeatTime = performance.now();
-    beatWindowOpen = true;
-    setTimeout(() => { beatWindowOpen = false; }, PEAK_WINDOW_MS);
-  }, BEAT_INTERVAL_MS);
-
-  // Draw loop
   animFrame = requestAnimationFrame(function tick(now) {
     animFrame = requestAnimationFrame(tick);
     const w = canvas.offsetWidth;
@@ -131,9 +134,21 @@ export function enterClock(state) {
     if (canvas.width !== w) canvas.width = w;
     if (canvas.height !== h) canvas.height = h;
 
-    const elapsed = now - lastBeatTime;
-    const beatT   = Math.min(1, elapsed / BEAT_INTERVAL_MS);
-    const pulse   = Math.sin(beatT * Math.PI);
+    // Advance beat: accumulate to avoid drift; snap on tab-wake
+    const sinceLast = now - lastBeatTime;
+    if (sinceLast >= BEAT_INTERVAL_MS) {
+      lastBeatTime += sinceLast > BEAT_INTERVAL_MS * 2
+        ? sinceLast - (sinceLast % BEAT_INTERVAL_MS)  // re-sync after background
+        : BEAT_INTERVAL_MS;
+    }
+
+    const beatElapsed = now - lastBeatTime;
+    const beatT  = Math.min(1, beatElapsed / BEAT_INTERVAL_MS);
+    const pulse  = Math.sin(beatT * Math.PI);
+
+    // Hit window is centred on the visual peak (beatT = 0.5)
+    const peakOffset = Math.abs(beatElapsed - BEAT_INTERVAL_MS / 2);
+    beatWindowOpen = peakOffset < PEAK_WINDOW_MS / 2;
 
     drawClock(ctx, w, h, pulse, state);
   });
@@ -196,7 +211,6 @@ function exitClock() {
 }
 
 function cleanup() {
-  if (intervalId) { clearInterval(intervalId); intervalId = null; }
   if (animFrame)  { cancelAnimationFrame(animFrame); animFrame = null; }
   if (patternDisplayTimer) { clearTimeout(patternDisplayTimer); patternDisplayTimer = null; }
   beatWindowOpen = false;
@@ -213,7 +227,6 @@ function onHit(state) {
 
   // Light the next pattern dot
   const hitsSoFar = state.rooms.clock.flags.consecutiveHits;
-  const patternIdx = Math.floor((hitsSoFar - 1) / (REQUIRED_CONSECUTIVE / PATTERN.length));
   const dotsToLight = Math.min(PATTERN.length, Math.ceil(hitsSoFar / 2));
 
   if (dotsToLight > state.rooms.clock.flags.patternDots) {
@@ -248,7 +261,7 @@ function onCleared(state) {
   state.rooms.clock.flags.patternDots = PATTERN.length;
 
   applyUnlock(state, 'bpm-expand');
-  applyUnlock(state, 'sequencer-row');
+  state.rooms.clock.flags.pattern = [1, 5, 9, 13];
   saveState();
   initControls();
 

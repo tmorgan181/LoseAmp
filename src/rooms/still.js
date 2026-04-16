@@ -31,12 +31,15 @@ export function enterStill(state) {
   back.addEventListener('click', () => exitStill());
   el.appendChild(back);
 
-  // Outer wrapper holds axis labels + grid
+  // Outer wrapper — column axis above, then a flex row of [rowAxis | grid]
   const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'position:relative;';
   el.appendChild(wrapper);
 
   // Column axis labels (0–9) above the grid — hidden initially
+  // Left-padded to align with grid columns (rowAxis width + gap)
+  const ROW_AXIS_W = 20;
+  const BODY_GAP   = 6;
+
   const colAxis = document.createElement('div');
   colAxis.id = 'still-col-axis';
   colAxis.style.cssText = [
@@ -44,6 +47,7 @@ export function enterStill(state) {
     `grid-template-columns:repeat(${COLS},1fr)`,
     'gap:14px',
     'padding:0 0 6px 0',
+    `margin-left:${ROW_AXIS_W + BODY_GAP}px`,
     'opacity:0',
     'transition:opacity 3s ease',
   ].join(';');
@@ -62,16 +66,21 @@ export function enterStill(state) {
   }
   wrapper.appendChild(colAxis);
 
-  // Row axis label wrapper (left side, positioned absolutely)
+  // Body row: rowAxis + grid side by side so labels align with rows
+  const bodyRow = document.createElement('div');
+  bodyRow.style.cssText = `display:flex;gap:${BODY_GAP}px;align-items:flex-start;`;
+  wrapper.appendChild(bodyRow);
+
+  // Row axis labels (left of grid, in normal flow)
   const rowAxis = document.createElement('div');
   rowAxis.id = 'still-row-axis';
   rowAxis.style.cssText = [
-    'position:absolute',
-    'left:-20px',
-    'top:0',
     'display:flex',
     'flex-direction:column',
-    `gap:14px`,
+    'gap:14px',
+    `width:${ROW_AXIS_W}px`,
+    'flex-shrink:0',
+    'padding-top:2px',  // match grid padding
     'opacity:0',
     'transition:opacity 3s ease',
   ].join(';');
@@ -133,8 +142,8 @@ export function enterStill(state) {
     grid.appendChild(dot);
   }
 
-  wrapper.appendChild(rowAxis);
-  wrapper.appendChild(grid);
+  bodyRow.appendChild(rowAxis);
+  bodyRow.appendChild(grid);
 
   state.rooms.still.visited = true;
 
@@ -171,8 +180,20 @@ function onWaitComplete(state, colAxis, rowAxis) {
 function onAbsenceFound(state) {
   if (state.rooms.still.flags.absenceFound) return;
 
-  // Only collectible after labels appear — player needs to know what they found
-  if (!labelsShown && !state.rooms.still.flags.waited) return;
+  // Not yet time — give a faint acknowledgement that something is here
+  if (!labelsShown && !state.rooms.still.flags.waited) {
+    const dots = document.querySelectorAll('.still-dot');
+    const dot  = dots[MISSING_IDX];
+    if (dot) {
+      dot.style.transition = 'background 0.15s ease';
+      dot.style.background = 'rgba(80,112,96,0.22)';
+      setTimeout(() => {
+        dot.style.transition = 'background 1.4s ease';
+        dot.style.background = 'transparent';
+      }, 200);
+    }
+    return;
+  }
 
   state.rooms.still.flags.absenceFound = true;
 
